@@ -1,0 +1,36 @@
+{
+  "name": "basedakp48-plugin-discord-connector",
+  "version": "0.0.1",
+  "description": "BasedAKP48 Discord Connector",
+  "license": "MIT",
+  "repository": "BasedAKP48/basedakp48-plugin-discord-connector",
+  "author": {
+    "name": "Austin Peterson",
+    "email": "austin@akpwebdesign.com",
+    "url": "akp48.akpmakes.tech"
+  },
+  "engines": {
+    "node": ">=6"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "files": [
+    "index.js"
+  ],
+  "keywords": [
+    "basedakp48-plugin"
+  ],
+  "dependencies": {
+    "bluebird": "^3.5.0",
+    "bufferutil": "^3.0.2",
+    "eris": "^0.7.0",
+    "erlpack": "hammerandchisel/erlpack",
+    "eventemitter3": "^2.0.3",
+    "firebase-admin": "^5.0.0",
+    "node-opus": "^0.2.6",
+    "sodium-native": "^1.10.2",
+    "uws": "^8.14.0"
+  },
+  "devDependencies": {}
+}
