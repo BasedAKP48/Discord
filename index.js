@@ -23,6 +23,11 @@ try {
 rootRef.child(`config/clients/${cid}`).on('value', (d) => {
   let config = d.val();
 
+  if(!config) {
+    console.log(`Be sure to configure your Discord connector at "config/clients/${cid}"!`);
+    process.exit(1);
+  }
+
   if(bot) {
     if(config.token !== token) {
       // we need to disconnect the bot and connect with our new token.
