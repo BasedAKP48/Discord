@@ -94,6 +94,6 @@ function handleMessage(msg) {
     timeReceived: msg.timestamp
   };
 
-  rootRef.child('incomingMessages').push().set(BasedAKP48Msg);
+  rootRef.child('pendingMessages').push().set(BasedAKP48Msg);
   console.log(`===> ${msg.author.username}#${msg.author.discriminator} | ${msg.channel.guild.name}/${msg.channel.name}: ${msg.content}`);
 }
