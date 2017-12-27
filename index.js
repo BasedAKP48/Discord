@@ -6,7 +6,7 @@ let cid, token, name, bot;
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  databaseURL: "https://basedakp48.firebaseio.com"
+  databaseURL: `https://${serviceAccount.project_id}.firebaseio.com`
 });
 
 const rootRef = admin.database().ref();
