@@ -2,6 +2,7 @@ const admin = require('firebase-admin');
 const serviceAccount = require("./serviceAccount.json");
 const Eris = require('eris');
 const Promise = require('bluebird');
+const inquirer = require('inquirer');
 let cid, token, name, bot;
 
 admin.initializeApp({
@@ -23,31 +24,32 @@ try {
 rootRef.child(`config/clients/${cid}`).on('value', (d) => {
   let config = d.val();
 
-  if(!config) {
-    console.log(`Be sure to configure your Discord connector at "config/clients/${cid}"!`);
-    process.exit(1);
+  if(!config || !d.hasChild('token')) {
+    prompt(d.ref);
+    return;
   }
 
   if(bot) {
-    if(config.token !== token) {
+    if(config.token !== bot.token) {
       // we need to disconnect the bot and connect with our new token.
+      // bot.disconnect({reconnect: false});
     }
 
     if(config.name !== name) {
       name = config.name;
     }
   } else { // no bot yet
-    token = config.token;
-    name = config.name;
-    bot = new Eris(token, {
-      // options will go here later.
-    });
-
-    initializeBot();
+    initializeBot(config.token);
   }
 });
 
-function initializeBot() {
+function initializeBot(token, options) {
+  bot = new Eris(token, {
+    // options will go here later.
+  });
+  
+  bot.on('error', (msg) => console.log("Error: ",msg));
+  
   bot.on('ready', () => {
     console.log('connected to Discord');
     bot.editStatus("online", {
@@ -96,4 +98,12 @@ function handleMessage(msg) {
 
   rootRef.child('pendingMessages').push().set(BasedAKP48Msg);
   console.log(`===> ${msg.author.username}#${msg.author.discriminator} | ${msg.channel.guild.name}/${msg.channel.name}: ${msg.content}`);
+}
+
+function prompt(ref) {
+  inquirer.prompt([{name: 'token', message: "Enter your bot's discord token:"}]).then(prompt => {
+    if (prompt.token) {
+      ref.update({'token': prompt.token});
+    }
+  });
 }
