@@ -30,20 +30,23 @@ rootRef.child(`config/clients/${cid}`).on('value', (d) => {
   }
 
   if(bot) {
-    if(config.token !== bot.token) {
+    if(config.token !== token) {
       // we need to disconnect the bot and connect with our new token.
-      // bot.disconnect({reconnect: false});
+      console.log("Disconnecting")
+      bot.disconnect({reconnect: false});
+      bot = null;
     }
 
     if(config.name !== name) {
-      name = config.name;
+      name = config.name; // TODO: rename
     }
-  } else { // no bot yet
-    initializeBot(config.token);
   }
+
+  token = config.token;
+  if (!bot) initializeBot();
 });
 
-function initializeBot(token, options) {
+function initializeBot(options) {
   bot = new Eris(token, {
     // options will go here later.
   });
@@ -103,7 +106,7 @@ function handleMessage(msg) {
 function prompt(ref) {
   inquirer.prompt([{name: 'token', message: "Enter your bot's discord token:"}]).then(prompt => {
     if (prompt.token) {
-      ref.update({'token': prompt.token});
+      ref.update({token: prompt.token});
     }
   });
 }
