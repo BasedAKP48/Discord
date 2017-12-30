@@ -62,9 +62,7 @@ function initializeBot(options) {
     });
   });
 
-  bot.on('messageCreate', (msg) => {
-    handleMessage(msg);
-  });
+  bot.on('messageCreate', handleMessage);
 
   rootRef.child(`clients/${cid}`).on('child_added', (d) => {
     let msg = d.val();
@@ -87,7 +85,7 @@ function initializeBot(options) {
 
 function handleMessage(msg) {
   if(msg.author.id == bot.user.id) {
-    console.log(`<=== ${msg.author.username}#${msg.author.discriminator} | ${msg.channel.guild.name}/${msg.channel.name}: ${msg.content}`);
+    console.log(`<=== ${msg.channel.guild.name}/${msg.channel.name}: ${msg.author.username}#${msg.author.discriminator}`);
     return;
   }
   let BasedAKP48Msg = {
@@ -99,8 +97,8 @@ function handleMessage(msg) {
     timeReceived: msg.timestamp
   };
 
-  rootRef.child('pendingMessages').push().set(BasedAKP48Msg);
-  console.log(`===> ${msg.author.username}#${msg.author.discriminator} | ${msg.channel.guild.name}/${msg.channel.name}: ${msg.content}`);
+  let msgRef = rootRef.child('pendingMessages').push(BasedAKP48Msg);
+  console.log(`===> [${msgRef.key}] ${msg.channel.guild.name}/${msg.channel.name} > ${msg.author.username}#${msg.author.discriminator}`);
 }
 
 function prompt(ref) {
