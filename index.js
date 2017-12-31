@@ -84,8 +84,12 @@ function initializeBot(options) {
 }
 
 function handleMessage(msg) {
+  let channelName = "DirectMessage";
+  if (msg.channel.name) {
+      channelName = `${msg.channel.guild.name}/${msg.channel.name}`;
+  }
   if(msg.author.id == bot.user.id) {
-    console.log(`<=== ${msg.channel.guild.name}/${msg.channel.name}: ${msg.author.username}#${msg.author.discriminator}`);
+    console.log(`<=== ${channelName}: ${msg.author.username}#${msg.author.discriminator}`);
     return;
   }
   let BasedAKP48Msg = {
@@ -98,7 +102,7 @@ function handleMessage(msg) {
   };
 
   let msgRef = rootRef.child('pendingMessages').push(BasedAKP48Msg);
-  console.log(`===> [${msgRef.key}] ${msg.channel.guild.name}/${msg.channel.name} > ${msg.author.username}#${msg.author.discriminator}`);
+  console.log(`===> [${msgRef.key}] ${channelName} > ${msg.author.username}#${msg.author.discriminator}`);
 }
 
 function prompt(ref) {
