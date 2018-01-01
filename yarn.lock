@@ -311,9 +311,9 @@ base64url@2.0.0, base64url@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/base64url/-/base64url-2.0.0.tgz#eac16e03ea1438eff9423d69baa36262ed1f70bb"
 
-basedakp48-plugin-utils@^1.5.0:
-  version "1.5.0"
-  resolved "https://registry.yarnpkg.com/basedakp48-plugin-utils/-/basedakp48-plugin-utils-1.5.0.tgz#09c4fc50685058df48edcf94b5c9f6384016e108"
+basedakp48-plugin-utils@^1.5.1:
+  version "1.5.1"
+  resolved "https://registry.yarnpkg.com/basedakp48-plugin-utils/-/basedakp48-plugin-utils-1.5.1.tgz#4db4f45bafd2d9a63fbbccf68e295b142396c731"
   dependencies:
     firebase-admin "^5.6.0"
 

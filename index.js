@@ -29,13 +29,11 @@ const presenceSystem = new PresenceSystem();
 presenceSystem.on('afk', (afk) => {
   status = afk ? 'idle' : 'online';
   bot && bot.editStatus(status);
-  console.log(status);
 });
 
 presenceSystem.on('offline', (offline) => {
   status = offline ? 'invisible' : 'online';
   bot && bot.editStatus(status);
-  console.log(status);
 });
 
 presenceSystem.initialize({
