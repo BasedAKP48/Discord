@@ -95,7 +95,7 @@ function handleMessage(msg) {
   }
 
   let extra_client_info = {
-    channel: msg.channel.name,
+    channel: `#${msg.channel.name}`,
     source: `${msg.author.username}#${msg.author.discriminator}`,
     server: msg.channel.guild.name
   };
