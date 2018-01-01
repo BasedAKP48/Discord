@@ -28,12 +28,22 @@ const presenceSystem = new PresenceSystem();
 
 presenceSystem.on('afk', (afk) => {
   status = afk ? 'idle' : 'online';
-  bot.editStatus(status);
+  bot && bot.editStatus(status);
+  console.log(status);
 });
 
 presenceSystem.on('offline', (offline) => {
   status = offline ? 'invisible' : 'online';
-  bot.editStatus(status);
+  bot && bot.editStatus(status);
+  console.log(status);
+});
+
+presenceSystem.initialize({
+  rootRef,
+  cid,
+  pkg,
+  instanceName: name || null,
+  listenMode: 'connector'
 });
 
 rootRef.child(`config/clients/${cid}`).on('value', (d) => {
@@ -61,6 +71,7 @@ rootRef.child(`config/clients/${cid}`).on('value', (d) => {
   if (!bot) initializeBot();
 });
 
+
 function initializeBot(options) {
   bot = new Eris(token, {
     // options will go here later.
@@ -74,13 +85,6 @@ function initializeBot(options) {
       name: 'with code.',
       type: 0,
       url: 'https://akp48.akpwebdesign.com/'
-    });
-    presenceSystem.initialize({
-      rootRef,
-      cid,
-      pkg,
-      instanceName: name || null,
-      listenMode: 'connector'
     });
   });
 
