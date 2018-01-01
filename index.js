@@ -53,25 +53,23 @@ presenceSystem.initialize({
 rootRef.child(`config/clients/${cid}`).on('value', (d) => {
   let config = d.val();
 
-  if(!config || !d.hasChild('token')) {
+  if (!config || !d.hasChild('token')) {
     prompt(d.ref);
     return;
   }
 
-  if(bot) {
-    if(config.token !== token) {
-      // we need to disconnect the bot and connect with our new token.
-      console.log("Disconnecting")
-      disconnect();
-      bot = null;
-    }
+  if (bot && config.token !== token) {
+    // we need to disconnect the bot and connect with our new token.
+    console.log("Disconnecting")
+    disconnect();
+    bot = null;
   }
 
-  if(config.name !== name) {
+  if (config.name !== name) {
     name = config.name; // TODO: rename
   }
 
-  if(config.game) {
+  if (config.game) {
     game = config.game;
     bot && bot.editStatus(game);
   }
