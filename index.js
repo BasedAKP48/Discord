@@ -151,3 +151,11 @@ function prompt(ref) {
     }
   });
 }
+
+// Don't expect this to work on Windows. https://nodejs.org/api/process.html#process_signal_events
+process.on('SIGINT', function() {
+  console.log("Caught interrupt signal, disconnecting from Discord");
+  bot && bot.disconnect({reconnect: false});
+  
+  setTimeout(() => process.exit(0), 750); // allow 750ms for disconnect
+});
