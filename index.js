@@ -6,6 +6,11 @@ const inquirer = require('inquirer');
 const { PresenceSystem } = require('basedakp48-plugin-utils');
 const pkg = require('./package.json');
 let status = 'online';
+let game = {
+  type: 0,
+  name: 'with code.',
+};
+
 let cid, token, name, bot;
 
 admin.initializeApp({
@@ -65,6 +70,11 @@ rootRef.child(`config/clients/${cid}`).on('value', (d) => {
     name = config.name; // TODO: rename
   }
 
+  if(config.game) {
+    game = config.game;
+    bot && bot.editStatus(status, game);
+  }
+
   token = config.token;
   if (!bot) initializeBot();
 });
@@ -79,11 +89,7 @@ function initializeBot(options) {
   
   bot.on('ready', () => {
     console.log('connected to Discord');
-    bot.editStatus(status, {
-      name: 'with code.',
-      type: 0,
-      url: 'https://akp48.akpwebdesign.com/'
-    });
+    bot.editStatus(status, game);
   });
 
   bot.on('messageCreate', handleMessage);
