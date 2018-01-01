@@ -72,6 +72,9 @@ function initializeBot(options) {
           if(msg.extra_client_info && msg.extra_client_info.discord_embed) {
             return bot.createMessage(msg.channel, {embed: msg.extra_client_info.discord_embed});
           }
+          if(msg.extra_client_info && msg.extra_client_info.mention) {
+            return bot.createMessage(msg.channel, `<@${msg.extra_client_info.mentionID}> ${msg.text}`)
+          }
           return bot.createMessage(msg.channel, msg.text);
         });
       }).then(() => {
