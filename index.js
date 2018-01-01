@@ -36,10 +36,10 @@ rootRef.child(`config/clients/${cid}`).on('value', (d) => {
       bot.disconnect({reconnect: false});
       bot = null;
     }
+  }
 
-    if(config.name !== name) {
-      name = config.name; // TODO: rename
-    }
+  if(config.name !== name) {
+    name = config.name; // TODO: rename
   }
 
   token = config.token;
@@ -97,7 +97,9 @@ function handleMessage(msg) {
   let extra_client_info = {
     channel: `#${msg.channel.name}`,
     source: `${msg.author.username}#${msg.author.discriminator}`,
-    server: msg.channel.guild.name
+    server: msg.channel.guild.name,
+    connectorType: 'discord',
+    connectorName: name || null,
   };
 
   let BasedAKP48Msg = {
