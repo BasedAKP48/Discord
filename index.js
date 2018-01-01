@@ -84,25 +84,33 @@ function initializeBot(options) {
 }
 
 function handleMessage(msg) {
+  if(msg.author.id == bot.user.id) {
+    return;
+  }
+  
   let channelName = "DirectMessage";
+  
   if (msg.channel.name) {
       channelName = `${msg.channel.guild.name}/${msg.channel.name}`;
   }
-  if(msg.author.id == bot.user.id) {
-    console.log(`<=== ${channelName}: ${msg.author.username}#${msg.author.discriminator}`);
-    return;
-  }
+
+  let extra_client_info = {
+    channel: msg.channel.name,
+    source: `${msg.author.username}#${msg.author.discriminator}`,
+    server: msg.channel.guild.name
+  };
+
   let BasedAKP48Msg = {
     cid: cid,
     uid: msg.author.id,
     text: msg.content,
     channel: msg.channel.id,
     msgType: 'chatMessage',
-    timeReceived: msg.timestamp
+    timeReceived: msg.timestamp,
+    extra_client_info
   };
 
   let msgRef = rootRef.child('pendingMessages').push(BasedAKP48Msg);
-  console.log(`===> [${msgRef.key}] ${channelName} > ${msg.author.username}#${msg.author.discriminator}`);
 }
 
 function prompt(ref) {
