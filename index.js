@@ -66,7 +66,7 @@ function initializeBot(options) {
 
   rootRef.child(`clients/${cid}`).on('child_added', (d) => {
     let msg = d.val();
-    if(msg.msgType.toLowerCase() === 'chatmessage') {
+    if(msg.type.toLowerCase() === 'text') {
       return bot.sendChannelTyping(msg.channel).then(() => {
         return Promise.delay(750).then(() => {
           if(msg.extra_client_info && msg.extra_client_info.discord_embed) {
@@ -100,6 +100,7 @@ function handleMessage(msg) {
     server: msg.channel.guild.name,
     connectorType: 'discord',
     connectorName: name || null,
+    connectorBotName: `${bot.user.username}#${bot.user.discriminator}`,
   };
 
   let BasedAKP48Msg = {
@@ -107,7 +108,8 @@ function handleMessage(msg) {
     uid: msg.author.id,
     text: msg.content,
     channel: msg.channel.id,
-    msgType: 'chatMessage',
+    type: 'text',
+    direction: 'in',
     timeReceived: msg.timestamp,
     extra_client_info
   };
