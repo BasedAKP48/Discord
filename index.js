@@ -5,6 +5,7 @@ const Promise = require('bluebird');
 const inquirer = require('inquirer');
 const { PresenceSystem } = require('basedakp48-plugin-utils');
 const pkg = require('./package.json');
+
 let status = 'online';
 let game = {
   type: 0,
@@ -61,7 +62,7 @@ rootRef.child(`config/clients/${cid}`).on('value', (d) => {
     if(config.token !== token) {
       // we need to disconnect the bot and connect with our new token.
       console.log("Disconnecting")
-      bot.disconnect({reconnect: false});
+      disconnect();
       bot = null;
     }
   }
@@ -161,8 +162,12 @@ function prompt(ref) {
 // Don't expect this to work on Windows. https://nodejs.org/api/process.html#process_signal_events
 process.on('SIGINT', function() {
   console.log("Caught interrupt signal, disconnecting from Discord");
-  bot && bot.editStatus('invisible');
-  bot && bot.disconnect({reconnect: false});
+  disconnect();
   
   setTimeout(() => process.exit(0), 750); // allow 750ms for disconnect
 });
+
+function disconnect() {
+  bot && bot.editStatus('invisible');
+  bot && bot.disconnect({reconnect: false});
+}
