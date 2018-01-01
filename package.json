@@ -22,6 +22,7 @@
     "basedakp48-plugin"
   ],
   "dependencies": {
+    "basedakp48-plugin-utils": "^1.5.0",
     "bluebird": "^3.5.0",
     "bufferutil": "^3.0.2",
     "eris": "^0.7.0",

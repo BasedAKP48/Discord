@@ -3,6 +3,9 @@ const serviceAccount = require("./serviceAccount.json");
 const Eris = require('eris');
 const Promise = require('bluebird');
 const inquirer = require('inquirer');
+const { PresenceSystem } = require('basedakp48-plugin-utils');
+const pkg = require('./package.json');
+let status = 'online';
 let cid, token, name, bot;
 
 admin.initializeApp({
@@ -20,6 +23,18 @@ try {
   cid = clientRef.key;
   fs.writeFileSync('./cid.json', JSON.stringify(cid), {encoding: 'UTF-8'});
 }
+
+const presenceSystem = new PresenceSystem();
+
+presenceSystem.on('afk', (afk) => {
+  status = afk ? 'idle' : 'online';
+  bot.editStatus(status);
+});
+
+presenceSystem.on('offline', (offline) => {
+  status = offline ? 'invisible' : 'online';
+  bot.editStatus(status);
+});
 
 rootRef.child(`config/clients/${cid}`).on('value', (d) => {
   let config = d.val();
@@ -55,10 +70,17 @@ function initializeBot(options) {
   
   bot.on('ready', () => {
     console.log('connected to Discord');
-    bot.editStatus("online", {
+    bot.editStatus(status, {
       name: 'with code.',
       type: 0,
       url: 'https://akp48.akpwebdesign.com/'
+    });
+    presenceSystem.initialize({
+      rootRef,
+      cid,
+      pkg,
+      instanceName: name || null,
+      listenMode: 'connector'
     });
   });
 
