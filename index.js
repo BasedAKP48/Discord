@@ -162,8 +162,6 @@ function prompt(ref) {
 process.on('SIGINT', function() {
   console.log("Caught interrupt signal, disconnecting from Discord");
   disconnect();
-  
-  setTimeout(() => process.exit(0), 750); // allow 750ms for disconnect
 });
 
 function disconnect() {
