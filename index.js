@@ -5,16 +5,14 @@ const Promise = require('bluebird');
 const inquirer = require('inquirer');
 const { PresenceSystem } = require('@basedakp48/plugin-utils');
 const pkg = require('./package.json');
+const {initialize} = require('@basedakp48/plugin-utils');
 
 let status = 'online';
 let game = {};
 
 let cid, token, name, bot;
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  databaseURL: `https://${serviceAccount.project_id}.firebaseio.com`
-});
+initialize(admin, serviceAccount);
 
 const rootRef = admin.database().ref();
 
@@ -79,13 +77,13 @@ rootRef.child(`clients/${cid}`).on('child_added', (d) => {
   if (!bot) return d.ref.remove(); // can't do anything without a bot.
 
   let msg = d.val();
-  if(msg.type.toLowerCase() === 'text') {
+  if (msg.type.toLowerCase() === 'text') {
     return bot.sendChannelTyping(msg.channel).then(() => {
       return Promise.delay(750).then(() => {
-        if(msg.extra_client_info && msg.extra_client_info.discord_embed) {
+        if (msg.extra_client_info && msg.extra_client_info.discord_embed) {
           return bot.createMessage(msg.channel, {embed: msg.extra_client_info.discord_embed});
         }
-        if(msg.extra_client_info && msg.extra_client_info.mention) {
+        if (msg.extra_client_info && msg.extra_client_info.mention) {
           return bot.createMessage(msg.channel, `<@${msg.extra_client_info.mentionID}> ${msg.text}`)
         }
         return bot.createMessage(msg.channel, msg.text);
@@ -114,7 +112,7 @@ function initializeBot(options) {
 }
 
 function handleMessage(msg) {
-  if(msg.author.id == bot.user.id) {
+  if (msg.author.id == bot.user.id) {
     return;
   }
   
