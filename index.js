@@ -7,10 +7,7 @@ const { PresenceSystem } = require('@basedakp48/plugin-utils');
 const pkg = require('./package.json');
 
 let status = 'online';
-let game = {
-  type: 0,
-  name: 'with code.',
-};
+let game = {};
 
 let cid, token, name, bot;
 
