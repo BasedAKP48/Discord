@@ -121,16 +121,13 @@ function handleMessage(msg) {
     return;
   }
   
-  let channelName = "DirectMessage";
+  let channelName = msg.channel.guild && msg.channel.name || 'DirectMessage';
+  let serverName = msg.channel.guild && msg.channel.guild.name || 'DirectMessage';
   
-  if (msg.channel.name) {
-      channelName = `${msg.channel.guild.name}/${msg.channel.name}`;
-  }
-
   let extra_client_info = {
-    channel: `#${msg.channel.name}`,
+    channel: `#${channelName}`,
     source: `${msg.author.username}#${msg.author.discriminator}`,
-    server: msg.channel.guild.name,
+    server: serverName,
     connectorType: 'discord',
     connectorName: name || null,
     connectorBotName: `${bot.user.username}#${bot.user.discriminator}`,
