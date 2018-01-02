@@ -27,13 +27,11 @@ try {
 
 const presenceSystem = new PresenceSystem();
 
-presenceSystem.on('afk', (afk) => {
-  status = afk ? 'idle' : 'online';
-  bot && bot.editStatus(status);
-});
-
-presenceSystem.on('offline', (offline) => {
-  status = offline ? 'invisible' : 'online';
+presenceSystem.on('status', (stauscode) => {
+  status = statuscode;
+  if (statuscode === 'afk') { // support "afk"
+    status = 'idle';
+  }
   bot && bot.editStatus(status);
 });
 
@@ -61,7 +59,8 @@ rootRef.child(`config/clients/${cid}`).on('value', (d) => {
   }
 
   if (config.name !== name) {
-    name = config.name; // TODO: rename
+    name = config.name; 
+    // TODO: presenceSystem.setName(name);
   }
 
   if (config.game) {
