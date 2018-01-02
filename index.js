@@ -162,6 +162,7 @@ function prompt(ref) {
 process.on('SIGINT', function() {
   console.log("Caught interrupt signal, disconnecting from Discord");
   disconnect();
+  process.exit();
 });
 
 function disconnect() {
