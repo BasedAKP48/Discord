@@ -78,6 +78,26 @@ rootRef.child(`config/clients/${cid}`).on('value', (d) => {
   if (!bot) initializeBot();
 });
 
+rootRef.child(`clients/${cid}`).on('child_added', (d) => {
+  if (!bot) return d.ref.remove(); // can't do anything without a bot.
+
+  let msg = d.val();
+  if(msg.type.toLowerCase() === 'text') {
+    return bot.sendChannelTyping(msg.channel).then(() => {
+      return Promise.delay(750).then(() => {
+        if(msg.extra_client_info && msg.extra_client_info.discord_embed) {
+          return bot.createMessage(msg.channel, {embed: msg.extra_client_info.discord_embed});
+        }
+        if(msg.extra_client_info && msg.extra_client_info.mention) {
+          return bot.createMessage(msg.channel, `<@${msg.extra_client_info.mentionID}> ${msg.text}`)
+        }
+        return bot.createMessage(msg.channel, msg.text);
+      });
+    }).then(() => {
+      return d.ref.remove();
+    });
+  }
+});
 
 function initializeBot(options) {
   bot = new Eris(token, {
@@ -92,25 +112,6 @@ function initializeBot(options) {
   });
 
   bot.on('messageCreate', handleMessage);
-
-  rootRef.child(`clients/${cid}`).on('child_added', (d) => {
-    let msg = d.val();
-    if(msg.type.toLowerCase() === 'text') {
-      return bot.sendChannelTyping(msg.channel).then(() => {
-        return Promise.delay(750).then(() => {
-          if(msg.extra_client_info && msg.extra_client_info.discord_embed) {
-            return bot.createMessage(msg.channel, {embed: msg.extra_client_info.discord_embed});
-          }
-          if(msg.extra_client_info && msg.extra_client_info.mention) {
-            return bot.createMessage(msg.channel, `<@${msg.extra_client_info.mentionID}> ${msg.text}`)
-          }
-          return bot.createMessage(msg.channel, msg.text);
-        });
-      }).then(() => {
-        return d.ref.remove();
-      });
-    }
-  });
 
   bot.connect();
 }
