@@ -2,6 +2,12 @@
 # yarn lockfile v1
 
 
+"@basedakp48/plugin-utils@^1.6.0":
+  version "1.6.0"
+  resolved "https://registry.yarnpkg.com/@basedakp48/plugin-utils/-/plugin-utils-1.6.0.tgz#d927af2b5d93ec98dbae3808b1dd5c1c0b05fb1d"
+  dependencies:
+    firebase-admin "^5.6.0"
+
 "@firebase/app-types@0.1.0":
   version "0.1.0"
   resolved "https://registry.yarnpkg.com/@firebase/app-types/-/app-types-0.1.0.tgz#27069ba4f8d74990eae7c88ec8f3d282e5215786"
@@ -314,12 +320,6 @@ balanced-match@^1.0.0:
 base64url@2.0.0, base64url@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/base64url/-/base64url-2.0.0.tgz#eac16e03ea1438eff9423d69baa36262ed1f70bb"
-
-basedakp48-plugin-utils@^1.5.1:
-  version "1.5.1"
-  resolved "https://registry.yarnpkg.com/basedakp48-plugin-utils/-/basedakp48-plugin-utils-1.5.1.tgz#4db4f45bafd2d9a63fbbccf68e295b142396c731"
-  dependencies:
-    firebase-admin "^5.6.0"
 
 bcrypt-pbkdf@^1.0.0:
   version "1.0.1"

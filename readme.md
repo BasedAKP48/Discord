@@ -1,4 +1,4 @@
-# basedakp48-plugin-discord-connector
+# plugin-discord-connector
 
 > BasedAKP48 Discord Connector
 
@@ -6,7 +6,7 @@
 ## Install
 
 ```
-$ npm install basedakp48-plugin-discord-connector
+$ npm install @basedakp48/plugin-discord-connector
 ```
 
 ## License

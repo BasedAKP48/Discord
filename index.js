@@ -3,7 +3,7 @@ const serviceAccount = require("./serviceAccount.json");
 const Eris = require('eris');
 const Promise = require('bluebird');
 const inquirer = require('inquirer');
-const { PresenceSystem } = require('basedakp48-plugin-utils');
+const { PresenceSystem } = require('@basedakp48/plugin-utils');
 const pkg = require('./package.json');
 
 let status = 'online';

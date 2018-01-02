@@ -1,16 +1,15 @@
 {
-  "name": "basedakp48-plugin-discord-connector",
+  "name": "@basedakp48/plugin-discord-connector",
   "version": "0.0.1",
-  "description": "BasedAKP48 Discord Connector",
+  "description": "Connects BasedAKP48 to Discord.",
   "license": "MIT",
-  "repository": "BasedAKP48/basedakp48-plugin-discord-connector",
-  "author": {
-    "name": "Austin Peterson",
-    "email": "austin@akpwebdesign.com",
-    "url": "blog.akpwebdesign.com"
-  },
+  "repository": "BasedAKP48/discord-connector",
+  "author": "Austin Peterson <austin@akpwebdesign.com> (https://blog.akpwebdesign.com)",
+  "contributors": [
+    "Alan H (Feildmaster) <akp48@feildmaster.com> (https://feildmaster.com/)"
+  ],
   "engines": {
-    "node": ">=6"
+    "node": ">=8"
   },
   "scripts": {
     "start": "node index.js"
@@ -19,10 +18,12 @@
     "index.js"
   ],
   "keywords": [
-    "basedakp48-plugin"
+    "basedakp48",
+    "basedakp48-plugin",
+    "discord"
   ],
   "dependencies": {
-    "basedakp48-plugin-utils": "^1.5.1",
+    "@basedakp48/plugin-utils": "^1.6.0",
     "bluebird": "^3.5.1",
     "eris": "^0.8.2",
     "erlpack": "discordapp/erlpack",
