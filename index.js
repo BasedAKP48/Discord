@@ -26,7 +26,7 @@ try {
 
 const presenceSystem = new PresenceSystem();
 
-presenceSystem.on('status', (stauscode) => {
+presenceSystem.on('status', (statuscode) => {
   status = statuscode;
   if (statuscode === 'afk') { // support "afk"
     status = 'idle';
