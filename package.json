@@ -1,5 +1,5 @@
 {
-  "name": "@basedakp48/plugin-discord-connector",
+  "name": "@basedakp48/connector-discord",
   "version": "0.0.1",
   "description": "Connects BasedAKP48 to Discord.",
   "license": "MIT",
@@ -19,7 +19,7 @@
   ],
   "keywords": [
     "basedakp48",
-    "basedakp48-plugin",
+    "basedakp48-connector",
     "discord"
   ],
   "dependencies": {
