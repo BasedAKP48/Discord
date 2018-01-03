@@ -109,6 +109,7 @@ function handleMessage(msg) {
   let extra_client_info = {
     channel: `#${channelName}`,
     source: `${msg.author.username}#${msg.author.discriminator}`,
+    nick: msg.channel.guild && msg.member.nick || msg.author.username,
     server: serverName,
     connectorType: 'discord',
     connectorName: name || null,
