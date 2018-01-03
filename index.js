@@ -3,9 +3,8 @@ const serviceAccount = require("./serviceAccount.json");
 const Eris = require('eris');
 const Promise = require('bluebird');
 const inquirer = require('inquirer');
-const { PresenceSystem } = require('@basedakp48/plugin-utils');
+const { PresenceSystem, initialize } = require('@basedakp48/plugin-utils');
 const pkg = require('./package.json');
-const {initialize} = require('@basedakp48/plugin-utils');
 
 let status = 'online';
 let game = {};
