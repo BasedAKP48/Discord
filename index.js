@@ -3,28 +3,17 @@ const serviceAccount = require("./serviceAccount.json");
 const Eris = require('eris');
 const Promise = require('bluebird');
 const inquirer = require('inquirer');
-const { PresenceSystem, initialize } = require('@basedakp48/plugin-utils');
+const utils = require('@basedakp48/plugin-utils');
 const pkg = require('./package.json');
+const presenceSystem = new utils.PresenceSystem();
+
+utils.initialize(admin, serviceAccount);
+const rootRef = admin.database().ref();
+const cid = utils.getCID(rootRef, __dirname);
 
 let status = 'online';
 let game = {};
-
-let cid, token, name, bot;
-
-initialize(admin, serviceAccount);
-
-const rootRef = admin.database().ref();
-
-try {
-  cid = require('./cid.json');
-} catch (e) {
-  let fs = require('fs');
-  let clientRef = rootRef.child('config/clients').push();
-  cid = clientRef.key;
-  fs.writeFileSync('./cid.json', JSON.stringify(cid), {encoding: 'UTF-8'});
-}
-
-const presenceSystem = new PresenceSystem();
+let token, name, bot;
 
 presenceSystem.on('status', (statuscode) => {
   status = statuscode;
@@ -52,7 +41,7 @@ rootRef.child(`config/clients/${cid}`).on('value', (d) => {
 
   if (bot && config.token !== token) {
     // we need to disconnect the bot and connect with our new token.
-    console.log("Disconnecting")
+    console.log("Reconnecting with new token")
     disconnect();
     bot = null;
   }

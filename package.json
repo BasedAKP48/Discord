@@ -6,7 +6,7 @@
   "repository": "BasedAKP48/discord-connector",
   "author": "Austin Peterson <austin@akpwebdesign.com> (https://blog.akpwebdesign.com)",
   "contributors": [
-    "Alan H (Feildmaster) <akp48@feildmaster.com> (https://feildmaster.com/)"
+    "Alan H (feildmaster) <akp48@feildmaster.com> (https://feildmaster.com/)"
   ],
   "engines": {
     "node": ">=8"
