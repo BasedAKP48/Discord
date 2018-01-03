@@ -123,12 +123,11 @@ function handleMessage(msg) {
     text: msg.content,
     channel: msg.channel.id,
     type: 'text',
-    direction: 'in',
     timeReceived: msg.timestamp,
     data
   };
 
-  let msgRef = rootRef.child('pendingMessages').push(BasedAKP48Msg);
+  rootRef.child('pendingMessages').push(BasedAKP48Msg);
 }
 
 function prompt(ref) {
@@ -139,7 +138,6 @@ function prompt(ref) {
   });
 }
 
-// Don't expect this to work on Windows. https://nodejs.org/api/process.html#process_signal_events
 process.on('SIGINT', function() {
   console.log("Caught interrupt signal, disconnecting from Discord");
   disconnect();
