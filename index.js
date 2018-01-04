@@ -5,7 +5,7 @@ const Promise = require('bluebird');
 const inquirer = require('inquirer');
 const utils = require('@basedakp48/plugin-utils');
 const pkg = require('./package.json');
-const presenceSystem = new utils.PresenceSystem();
+const presenceSystem = utils.PresenceSystem();
 
 utils.initialize(admin, serviceAccount);
 const rootRef = admin.database().ref();

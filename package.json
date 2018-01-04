@@ -23,7 +23,7 @@
     "discord"
   ],
   "dependencies": {
-    "@basedakp48/plugin-utils": "^1.7.0",
+    "@basedakp48/plugin-utils": "^1.10.0",
     "bluebird": "^3.5.1",
     "eris": "^0.8.2",
     "erlpack": "discordapp/erlpack",
