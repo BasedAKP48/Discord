@@ -67,11 +67,11 @@ rootRef.child(`clients/${cid}`).on('child_added', (d) => {
   if (msg.type.toLowerCase() === 'text') {
     return bot.sendChannelTyping(msg.channel).then(() => {
       return Promise.delay(750).then(() => {
-        if (msg.extra_client_info && msg.extra_client_info.discord_embed) {
-          return bot.createMessage(msg.channel, {embed: msg.extra_client_info.discord_embed});
+        if (msg.data && msg.data.discord_embed) {
+          return bot.createMessage(msg.channel, {embed: msg.data.discord_embed});
         }
-        if (msg.extra_client_info && msg.extra_client_info.mention) {
-          return bot.createMessage(msg.channel, `<@${msg.extra_client_info.mentionID}> ${msg.text}`)
+        if (msg.data && msg.data.mention) {
+          return bot.createMessage(msg.channel, `<@${msg.data.mentionID}> ${msg.text}`)
         }
         return bot.createMessage(msg.channel, msg.text);
       });
@@ -106,7 +106,7 @@ function handleMessage(msg) {
   let channelName = msg.channel.guild && msg.channel.name || 'DirectMessage';
   let serverName = msg.channel.guild && msg.channel.guild.name || 'DirectMessage';
   
-  let extra_client_info = {
+  let data = {
     channel: `#${channelName}`,
     source: `${msg.author.username}#${msg.author.discriminator}`,
     nick: msg.channel.guild && msg.member.nick || msg.author.username,
@@ -125,7 +125,7 @@ function handleMessage(msg) {
     type: 'text',
     direction: 'in',
     timeReceived: msg.timestamp,
-    extra_client_info
+    data
   };
 
   let msgRef = rootRef.child('pendingMessages').push(BasedAKP48Msg);
