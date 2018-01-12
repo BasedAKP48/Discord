@@ -57,7 +57,8 @@ rootRef.child(`config/clients/${cid}`).on('value', (d) => {
   }
 
   token = config.token;
-  if (!bot) initializeBot();
+
+  initializeBot();
 });
 
 rootRef.child(`clients/${cid}`).on('child_added', (d) => {
@@ -82,6 +83,7 @@ rootRef.child(`clients/${cid}`).on('child_added', (d) => {
 });
 
 function initializeBot(options) {
+  if (bot || !token) return;
   bot = new Eris(token, {
     // options will go here later.
   });
