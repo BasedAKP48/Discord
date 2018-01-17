@@ -1,10 +1,11 @@
 const admin = require('firebase-admin');
-const serviceAccount = require("./serviceAccount.json");
+const serviceAccount = require('./serviceAccount.json');
 const Eris = require('eris');
 const Promise = require('bluebird');
 const inquirer = require('inquirer');
 const utils = require('@basedakp48/plugin-utils');
 const pkg = require('./package.json');
+
 const presenceSystem = utils.PresenceSystem();
 
 utils.initialize(admin, serviceAccount);
@@ -13,7 +14,9 @@ const cid = utils.getCID(rootRef, __dirname);
 
 let status = 'online';
 let game = {};
-let token, name, bot;
+let token;
+let name;
+let bot;
 
 presenceSystem.on('status', (statuscode) => {
   status = statuscode;
@@ -28,11 +31,11 @@ presenceSystem.initialize({
   cid,
   pkg,
   instanceName: name || null,
-  listenMode: 'connector'
+  listenMode: 'connector',
 });
 
 rootRef.child(`config/clients/${cid}`).on('value', (d) => {
-  let config = d.val();
+  const config = d.val();
 
   if (!config || !d.hasChild('token')) {
     prompt(d.ref);
@@ -41,18 +44,18 @@ rootRef.child(`config/clients/${cid}`).on('value', (d) => {
 
   if (bot && config.token !== token) {
     // we need to disconnect the bot and connect with our new token.
-    console.log("Reconnecting with new token")
+    console.log('Reconnecting with new token');
     disconnect();
     bot = null;
   }
 
   if (config.name !== name) {
-    name = config.name; 
+    name = config.name;
     // TODO: presenceSystem.setName(name);
   }
 
   if (config.game) {
-    game = config.game;
+    ({ game } = config.game);
     bot && bot.editStatus(game);
   }
 
@@ -64,21 +67,17 @@ rootRef.child(`config/clients/${cid}`).on('value', (d) => {
 rootRef.child(`clients/${cid}`).on('child_added', (d) => {
   if (!bot) return d.ref.remove(); // can't do anything without a bot.
 
-  let msg = d.val();
+  const msg = d.val();
   if (msg.type.toLowerCase() === 'text') {
-    return bot.sendChannelTyping(msg.channel).then(() => {
-      return Promise.delay(750).then(() => {
-        if (msg.data && msg.data.discord_embed) {
-          return bot.createMessage(msg.channel, {embed: msg.data.discord_embed});
-        }
-        if (msg.data && msg.data.mention) {
-          return bot.createMessage(msg.channel, `<@${msg.data.mentionID}> ${msg.text}`)
-        }
-        return bot.createMessage(msg.channel, msg.text);
-      });
-    }).then(() => {
-      return d.ref.remove();
-    });
+    return bot.sendChannelTyping(msg.channel).then(() => Promise.delay(750).then(() => {
+      if (msg.data && msg.data.discord_embed) {
+        return bot.createMessage(msg.channel, { embed: msg.data.discord_embed });
+      }
+      if (msg.data && msg.data.mention) {
+        return bot.createMessage(msg.channel, `<@${msg.data.mentionID}> ${msg.text}`);
+      }
+      return bot.createMessage(msg.channel, msg.text);
+    })).then(() => d.ref.remove());
   }
 });
 
@@ -87,9 +86,9 @@ function initializeBot(options) {
   bot = new Eris(token, {
     // options will go here later.
   });
-  
-  bot.on('error', (msg) => console.log("Error: ",msg));
-  
+
+  bot.on('error', msg => console.log('Error: ', msg));
+
   bot.on('ready', () => {
     console.log('connected to Discord');
     bot.editStatus(status, game);
@@ -101,17 +100,17 @@ function initializeBot(options) {
 }
 
 function handleMessage(msg) {
-  if (msg.author.id == bot.user.id) {
+  if (msg.author.id === bot.user.id) {
     return;
   }
-  
-  let channelName = msg.channel.guild && msg.channel.name || 'DirectMessage';
-  let serverName = msg.channel.guild && msg.channel.guild.name || 'DirectMessage';
-  
-  let data = {
+
+  const channelName = (msg.channel.guild && msg.channel.name) || 'DirectMessage';
+  const serverName = (msg.channel.guild && msg.channel.guild.name) || 'DirectMessage';
+
+  const data = {
     channel: `#${channelName}`,
     source: `${msg.author.username}#${msg.author.discriminator}`,
-    nick: msg.channel.guild && msg.member.nick || msg.author.username,
+    nick: (msg.channel.guild && msg.member.nick) || msg.author.username,
     server: serverName,
     connectorType: 'discord',
     connectorName: name || null,
@@ -119,34 +118,35 @@ function handleMessage(msg) {
     isPM: msg.channel instanceof Eris.PrivateChannel || null,
   };
 
-  let BasedAKP48Msg = {
-    cid: cid,
+  const BasedAKP48Msg = {
+    cid,
+    data,
     uid: msg.author.id,
     text: msg.content,
     channel: msg.channel.id,
     type: 'text',
     timeReceived: msg.timestamp,
-    data
   };
 
   rootRef.child('pendingMessages').push(BasedAKP48Msg);
 }
 
 function prompt(ref) {
-  inquirer.prompt([{name: 'token', message: "Enter your bot's discord token:"}]).then(prompt => {
-    if (prompt.token) {
-      ref.update({token: prompt.token});
+  inquirer.prompt([{ name: 'token', message: "Enter your bot's discord token:" }]).then((vals) => {
+    if (vals.token) {
+      ref.update({ token: vals.token });
     }
   });
 }
 
-process.on('SIGINT', function() {
-  console.log("Caught interrupt signal, disconnecting from Discord");
+process.on('SIGINT', () => {
+  console.log('Caught interrupt signal, disconnecting from Discord');
   disconnect();
   process.exit();
 });
 
 function disconnect() {
-  bot && bot.editStatus('invisible');
-  bot && bot.disconnect({reconnect: false});
+  if (!bot) return;
+  bot.editStatus('invisible');
+  bot.disconnect({ reconnect: false });
 }
