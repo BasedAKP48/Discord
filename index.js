@@ -55,7 +55,7 @@ rootRef.child(`config/clients/${cid}`).on('value', (d) => {
   }
 
   if (config.game) {
-    ({ game } = config.game);
+    game = config.game;
     bot && bot.editStatus(game);
   }
 
