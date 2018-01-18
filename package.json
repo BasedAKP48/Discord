@@ -23,10 +23,9 @@
     "discord"
   ],
   "dependencies": {
-    "@basedakp48/plugin-utils": "^1.10.0",
+    "@basedakp48/plugin-utils": "^1.12.2",
     "bluebird": "^3.5.1",
     "eris": "^0.8.2",
-    "erlpack": "discordapp/erlpack",
     "eventemitter3": "^3.0.0",
     "firebase-admin": "^5.0.0",
     "inquirer": "^4.0.1",

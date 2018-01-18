@@ -1,16 +1,10 @@
-const admin = require('firebase-admin');
-const serviceAccount = require('./serviceAccount.json');
 const Eris = require('eris');
 const Promise = require('bluebird');
 const inquirer = require('inquirer');
+const path = require('path');
 const utils = require('@basedakp48/plugin-utils');
-const pkg = require('./package.json');
 
-const presenceSystem = utils.PresenceSystem();
-
-utils.initialize(admin, serviceAccount);
-const rootRef = admin.database().ref();
-const cid = utils.getCID(rootRef, __dirname);
+const connector = new utils.Connector({ cidPath: path.resolve('./cid.json') });
 
 let status = 'online';
 let game = {};
@@ -18,28 +12,9 @@ let token;
 let name;
 let bot;
 
-presenceSystem.on('status', (statuscode) => {
-  status = statuscode;
-  if (statuscode === 'afk') { // support "afk"
-    status = 'idle';
-  }
-  bot && bot.editStatus(status);
-});
-
-presenceSystem.initialize({
-  rootRef,
-  cid,
-  pkg,
-  instanceName: name || null,
-  listenMode: 'connector',
-});
-
-rootRef.child(`config/clients/${cid}`).on('value', (d) => {
-  const config = d.val();
-
-  if (!config || !d.hasChild('token')) {
-    prompt(d.ref);
-    return;
+connector.on('config', (config, ref) => {
+  if (!config || !config.token) {
+    return prompt(ref);
   }
 
   if (bot && config.token !== token) {
@@ -62,12 +37,20 @@ rootRef.child(`config/clients/${cid}`).on('value', (d) => {
   token = config.token;
 
   initializeBot();
+})
+  .on('destroy', disconnect);
+
+connector.presenceSystem().on('status', (statuscode) => {
+  status = statuscode;
+  if (statuscode === 'afk') { // support "afk"
+    status = 'idle';
+  }
+  bot && bot.editStatus(status);
 });
 
-rootRef.child(`clients/${cid}`).on('child_added', (d) => {
-  if (!bot) return d.ref.remove(); // can't do anything without a bot.
+connector.messageSystem().on('message', (msg, ref) => {
+  if (!bot) return ref.remove(); // can't do anything without a bot.
 
-  const msg = d.val();
   if (msg.type.toLowerCase() === 'text') {
     return bot.sendChannelTyping(msg.channel).then(() => Promise.delay(750).then(() => {
       if (msg.data && msg.data.discord_embed) {
@@ -77,7 +60,7 @@ rootRef.child(`clients/${cid}`).on('child_added', (d) => {
         return bot.createMessage(msg.channel, `<@${msg.data.mentionID}> ${msg.text}`);
       }
       return bot.createMessage(msg.channel, msg.text);
-    })).then(() => d.ref.remove());
+    })).then(() => ref.remove());
   }
 });
 
@@ -119,8 +102,8 @@ function handleMessage(msg) {
   };
 
   const BasedAKP48Msg = {
-    cid,
     data,
+    cid: connector.cid,
     uid: msg.author.id,
     text: msg.content,
     channel: msg.channel.id,
@@ -128,7 +111,7 @@ function handleMessage(msg) {
     timeReceived: msg.timestamp,
   };
 
-  rootRef.child('pendingMessages').push(BasedAKP48Msg);
+  connector.messageSystem().sendMessage(BasedAKP48Msg);
 }
 
 function prompt(ref) {
@@ -139,14 +122,9 @@ function prompt(ref) {
   });
 }
 
-process.on('SIGINT', () => {
-  console.log('Caught interrupt signal, disconnecting from Discord');
-  disconnect();
-  process.exit();
-});
-
 function disconnect() {
   if (!bot) return;
   bot.editStatus('invisible');
   bot.disconnect({ reconnect: false });
+  console.log('Disconnected from discord.');
 }
