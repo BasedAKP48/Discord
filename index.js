@@ -10,18 +10,18 @@ let status = 'online';
 let game = {};
 let token;
 let name;
-let bot;
+let discord;
 
 connector.on('config', (config, ref) => {
   if (!config || !config.token) {
     return prompt(ref);
   }
 
-  if (bot && config.token !== token) {
+  if (discord && config.token !== token) {
     // we need to disconnect the bot and connect with our new token.
     console.log('Reconnecting with new token');
     disconnect();
-    bot = null;
+    discord = null;
   }
 
   if (config.name !== name) {
@@ -31,7 +31,7 @@ connector.on('config', (config, ref) => {
 
   if (config.game) {
     game = config.game;
-    bot && bot.editStatus(game);
+    discord && discord.editStatus(game);
   }
 
   token = config.token;
@@ -45,12 +45,12 @@ connector.presenceSystem().on('status', (statuscode) => {
   if (statuscode === 'afk') { // support "afk"
     status = 'idle';
   }
-  bot && bot.editStatus(status);
+  discord && discord.editStatus(status);
 });
 
 connector.messageSystem().on('message/text', (msg, ref) => {
-  if (!bot) return ref.remove(); // can't do anything without a bot.
-  return bot.sendChannelTyping(msg.channel).then(() => Promise.delay(750).then(() => {
+  if (!discord) return ref.remove(); // can't do anything without a bot.
+  return discord.sendChannelTyping(msg.channel).then(() => Promise.delay(750).then(() => {
     if (msg.data && msg.data.discord_embed) {
       const content = {
         embed: msg.data.discord_embed,
@@ -58,35 +58,35 @@ connector.messageSystem().on('message/text', (msg, ref) => {
       if (msg.data.includeText) {
         content.content = msg.text;
       }
-      return bot.createMessage(msg.channel, content);
+      return discord.createMessage(msg.channel, content);
     }
     if (msg.data && msg.data.mention) {
-      return bot.createMessage(msg.channel, `<@${msg.data.mentionID}> ${msg.text}`);
+      return discord.createMessage(msg.channel, `<@${msg.data.mentionID}> ${msg.text}`);
     }
-    return bot.createMessage(msg.channel, msg.text);
+    return discord.createMessage(msg.channel, msg.text);
   })).then(() => ref.remove());
 });
 
 function initializeBot(options) {
-  if (bot || !token) return;
-  bot = new Eris(token, {
+  if (discord || !token) return;
+  discord = new Eris(token, {
     // options will go here later.
   });
 
-  bot.on('error', msg => console.log('Error: ', msg));
+  discord.on('error', msg => console.log('Error: ', msg));
 
-  bot.on('ready', () => {
+  discord.on('ready', () => {
     console.log('connected to Discord');
-    bot.editStatus(status, game);
+    discord.editStatus(status, game);
   });
 
-  bot.on('messageCreate', handleMessage);
+  discord.on('messageCreate', handleMessage);
 
-  bot.connect();
+  discord.connect();
 }
 
 function handleMessage(msg) {
-  if (msg.author.id === bot.user.id) {
+  if (msg.author.id === discord.user.id) {
     return;
   }
 
@@ -100,7 +100,7 @@ function handleMessage(msg) {
     server: serverName,
     connectorType: 'discord',
     connectorName: name || null,
-    connectorBotName: `${bot.user.username}#${bot.user.discriminator}`,
+    connectorBotName: `${discord.user.username}#${discord.user.discriminator}`,
     isPM: msg.channel instanceof Eris.PrivateChannel || null,
   };
 
@@ -126,8 +126,8 @@ function prompt(ref) {
 }
 
 function disconnect() {
-  if (!bot) return;
-  bot.editStatus('invisible');
-  bot.disconnect({ reconnect: false });
+  if (!discord) return;
+  discord.editStatus('invisible');
+  discord.disconnect({ reconnect: false });
   console.log('Disconnected from discord.');
 }
