@@ -3,6 +3,7 @@ const Promise = require('bluebird');
 const inquirer = require('inquirer');
 const path = require('path');
 const utils = require('@basedakp48/plugin-utils');
+const getInternalCommand = require('./internal');
 
 const connector = new utils.Connector({ cidPath: path.resolve('./cid.json') });
 
@@ -65,6 +66,25 @@ connector.messageSystem().on('message/text', (msg, ref) => {
     }
     return discord.createMessage(msg.channel, msg.text);
   })).then(() => ref.remove());
+}).on('message/internal', (msg, ref) => {
+  if (discord) {
+    getInternalCommand(msg)
+      .then(c => c.getMessage({ connector, discord, message: msg }))
+      .catch(e => ({ error: e.message }))
+      .then((data) => {
+        const message = {
+          data,
+          uid: connector.cid,
+          target: msg.uid,
+          channel: msg.channel,
+          text: msg.text,
+          type: 'AKPacket',
+          timeReceived: Date.now(),
+        };
+        connector.messageSystem().sendMessage(message);
+      });
+  }
+  ref.remove();
 });
 
 function initializeBot(options) {
