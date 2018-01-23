@@ -68,7 +68,6 @@ connector.messageSystem().on('message', (msg, ref) => {
       return bot.createMessage(msg.channel, msg.text);
     })).then(() => ref.remove());
   }
-  }
 });
 
 function initializeBot(options) {
