@@ -52,15 +52,22 @@ connector.messageSystem().on('message', (msg, ref) => {
   if (!bot) return ref.remove(); // can't do anything without a bot.
 
   if (msg.type.toLowerCase() === 'text') {
-    return bot.sendChannelTyping(msg.channel).then(() => Promise.delay(750).then(() => {
+    bot.sendChannelTyping(msg.channel).then(() => Promise.delay(750).then(() => {
       if (msg.data && msg.data.discord_embed) {
-        return bot.createMessage(msg.channel, { embed: msg.data.discord_embed });
+        const content = {
+          embed: msg.data.discord_embed,
+        };
+        if (msg.data.includeText) {
+          content.content = msg.text;
+        }
+        return bot.createMessage(msg.channel, content);
       }
       if (msg.data && msg.data.mention) {
         return bot.createMessage(msg.channel, `<@${msg.data.mentionID}> ${msg.text}`);
       }
       return bot.createMessage(msg.channel, msg.text);
     })).then(() => ref.remove());
+  }
   }
 });
 
