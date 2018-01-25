@@ -18,6 +18,7 @@ class Command {
   getMessage(options) {
     return new Promise((res) => {
       const data = this.runCommand(options);
+      if (!data || (!Object.keys(data).length && data.constructor === Object)) throw new Error('Data not available');
       res(data);
     });
   }
