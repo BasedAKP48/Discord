@@ -21,7 +21,7 @@ class Command {
   getMessage(options) {
     return new Promise((res, rej) => {
       const data = this.runCommand(options);
-      if (!data || emptyObject(data)) throw new Error('Data not available');
+      if (emptyObject(data)) throw new Error('Data not available');
       if (data instanceof Promise) {
         data.catch(rej)
           .then((result) => {
@@ -46,7 +46,8 @@ class Command {
 }
 
 function emptyObject(object) {
-  return !Object.keys(object).length && object.constructor === Object;
+  return object === undefined || object === null ||
+    (object.constructor === Object && !Object.keys(object).length);
 }
 
 module.exports = Command;
