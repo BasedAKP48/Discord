@@ -1,5 +1,6 @@
 const Promise = require('bluebird');
 const fs = Promise.promisifyAll(require('fs'));
+const Command = require('./command');
 
 const commands = new Map();
 
@@ -8,6 +9,11 @@ fs.readdirAsync(__dirname).then(files => files.forEach((file) => {
   if (file.startsWith('.') || !file.match(/\.command\.js$/)) return;
   // eslint-disable-next-line global-require, import/no-dynamic-require
   const command = require(`./${file}`);
+  if (!(command instanceof Command) || command.commands.length === 0) {
+    console.log('Bad command file:', file);
+    return;
+  }
+
   command.commands.forEach((cmd) => {
     if (commands.has(cmd)) {
       console.log(`${file}:${cmd} already registered by ${commands.get(cmd).name}`);
