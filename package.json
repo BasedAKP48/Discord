@@ -15,7 +15,8 @@
     "start": "node index.js"
   },
   "files": [
-    "index.js"
+    "index.js",
+    "internal/*.js"
   ],
   "keywords": [
     "basedakp48",
