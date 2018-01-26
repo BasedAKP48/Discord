@@ -117,6 +117,7 @@ function handleMessage(msg) {
     channel: `#${channelName}`,
     source: `${msg.author.username}#${msg.author.discriminator}`,
     nick: (msg.channel.guild && msg.member.nick) || msg.author.username,
+    serverID: msg.channel.guild ? msg.channel.guild.id : null,
     server: serverName,
     connectorType: 'discord',
     connectorName: name || null,
