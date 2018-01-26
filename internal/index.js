@@ -2,6 +2,9 @@ const Promise = require('bluebird');
 const fs = Promise.promisifyAll(require('fs'));
 const Command = require('./command');
 
+/**
+ * @type {Map<String, Command>}
+ */
 const commands = new Map();
 
 // Parse all the internal functions and commands
@@ -15,6 +18,7 @@ fs.readdirAsync(__dirname).then(files => files.forEach((file) => {
   }
 
   command.commands.forEach((cmd) => {
+    cmd = cmd.toLowerCase();
     if (commands.has(cmd)) {
       console.log(`${file}:${cmd} already registered by ${commands.get(cmd).name}`);
     } else {
@@ -23,4 +27,12 @@ fs.readdirAsync(__dirname).then(files => files.forEach((file) => {
   });
 }));
 
-module.exports = msg => new Promise(res => res(commands.get(msg.text) || commands.get('default')));
+/**
+ * @param {AKP48Message} message
+ * @returns {Promise<Command>}
+ */
+function getCommand(message) {
+  return Promise.resolve(commands.get(message.text.toLowerCase()) || commands.get('default'));
+}
+
+module.exports = getCommand;
