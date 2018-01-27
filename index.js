@@ -5,7 +5,10 @@ const path = require('path');
 const utils = require('@basedakp48/plugin-utils');
 const getInternalCommand = require('./internal');
 
-const connector = new utils.Connector({ cidPath: path.resolve('./cid.json') });
+const connector = new utils.Connector({
+  name: 'Discord',
+  cidPath: path.resolve('./cid.json'),
+});
 
 let status = 'online';
 let game = {};
@@ -20,7 +23,7 @@ connector.on('config', (config, ref) => {
 
   if (discord && config.token !== token) {
     // we need to disconnect the bot and connect with our new token.
-    console.log('Reconnecting with new token');
+    console.log('reconnecting with new token');
     disconnect();
     discord = null;
   }
@@ -139,7 +142,7 @@ function handleMessage(msg) {
 }
 
 function prompt(ref) {
-  inquirer.prompt([{ name: 'token', message: "Enter your bot's discord token:" }]).then((vals) => {
+  inquirer.prompt([{ name: 'token', message: "Enter your bot's Discord token:" }]).then((vals) => {
     if (vals.token) {
       ref.update({ token: vals.token });
     }
@@ -150,5 +153,5 @@ function disconnect() {
   if (!discord) return;
   discord.editStatus('invisible');
   discord.disconnect({ reconnect: false });
-  console.log('Disconnected from discord.');
+  console.log('disconnected from Discord');
 }
