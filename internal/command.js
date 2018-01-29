@@ -19,21 +19,9 @@ class Command {
    * @public
    */
   getMessage(options) {
-    return new Promise((res, rej) => {
-      const data = this.runCommand(options);
+    return Promise.resolve(this.runCommand(options)).then((data) => {
       if (emptyObject(data)) throw new Error('Data not available');
-      if (data instanceof Promise) {
-        data.catch(rej)
-          .then((result) => {
-            if (emptyObject(result)) {
-              rej(new Error('Data not available'));
-            } else {
-              res(result);
-            }
-          });
-      } else {
-        res(data);
-      }
+      return data;
     });
   }
 
