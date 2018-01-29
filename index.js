@@ -54,21 +54,22 @@ connector.presenceSystem().on('status', (statuscode) => {
 
 connector.messageSystem().on('message/text', (msg, ref) => {
   if (!discord) return ref.remove(); // can't do anything without a bot.
-  return discord.sendChannelTyping(msg.channel).then(() => Promise.delay(750).then(() => {
-    if (msg.data && msg.data.discord_embed) {
+  return discord.sendChannelTyping(msg.channel)
+    .then(() => Promise.delay(750).then(() => {
       const content = {
-        embed: msg.data.discord_embed,
+        content: msg.text,
       };
-      if (msg.data.includeText) {
-        content.content = msg.text;
+      if (msg.data && msg.data.mention && msg.data.mentionID) {
+        content.content = `<@${msg.data.mentionID}> ${content.content}`;
+      }
+      if (msg.data && msg.data.discord_embed) {
+        content.embed = msg.data.discord_embed;
+        if (!msg.data.includeText) {
+          delete content.content;
+        }
       }
       return discord.createMessage(msg.channel, content);
-    }
-    if (msg.data && msg.data.mention) {
-      return discord.createMessage(msg.channel, `<@${msg.data.mentionID}> ${msg.text}`);
-    }
-    return discord.createMessage(msg.channel, msg.text);
-  })).then(() => ref.remove());
+    })).then(() => ref.remove());
 }).on('message/internal', (msg, ref) => {
   if (discord) {
     getInternalCommand(msg)
