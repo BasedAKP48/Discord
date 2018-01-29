@@ -59,13 +59,15 @@ connector.messageSystem().on('message/text', (msg, ref) => {
       const content = {
         content: msg.text,
       };
-      if (msg.data && msg.data.mention && msg.data.mentionID) {
-        content.content = `<@${msg.data.mentionID}> ${content.content}`;
-      }
-      if (msg.data && msg.data.discord_embed) {
-        content.embed = msg.data.discord_embed;
-        if (!msg.data.includeText) {
-          delete content.content;
+      if (msg.data) {
+        if (msg.data.mention && msg.data.mentionID) {
+          content.content = `<@${msg.data.mentionID}> ${content.content}`;
+        }
+        if (msg.data.discord_embed) {
+          content.embed = msg.data.discord_embed;
+          if (!msg.data.includeText) {
+            delete content.content;
+          }
         }
       }
       return discord.createMessage(msg.channel, content);
