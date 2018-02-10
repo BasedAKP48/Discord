@@ -106,7 +106,8 @@ function initializeBot(options) {
     discord.editStatus(status, game);
   });
 
-  discord.on('messageCreate', handleMessage);
+  discord.on('messageCreate', handleMessage)
+    .on('guildMemberAdd', handleJoin);
 
   discord.connect();
 }
@@ -144,6 +145,27 @@ function handleMessage(msg) {
   };
 
   connector.messageSystem().sendMessage(BasedAKP48Msg);
+}
+
+function handleJoin(guild, member) {
+  const botName = `${discord.user.username}#${discord.user.discriminator}`;
+  const message = {
+    cid: connector.cid,
+    uid: member.id,
+    text: member.username,
+    channel: guild.id,
+    type: 'join',
+    timeReceived: member.joinedAt,
+    data: {
+      connectorType: 'discord',
+      server: guild.name,
+      source: `${member.username}#${member.discriminator}`,
+      sourceIsBot: member.bot,
+      connectorName: name || null,
+      connectorBotName: botName,
+    },
+  };
+  connector.messageSystem().sendMessage(message);
 }
 
 function prompt(ref) {
