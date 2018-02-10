@@ -130,6 +130,7 @@ function handleMessage(msg) {
     connectorName: name || null,
     connectorBotName: `${discord.user.username}#${discord.user.discriminator}`,
     isPM: msg.channel instanceof Eris.PrivateChannel || null,
+    messageID: msg.id,
   };
 
   const BasedAKP48Msg = {
