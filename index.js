@@ -107,6 +107,7 @@ function initializeBot(options) {
   });
 
   discord.on('messageCreate', handleMessage)
+    .on('guildMemberRemove', handleLeave)
     .on('guildMemberAdd', handleJoin);
 
   discord.connect();
@@ -148,13 +149,22 @@ function handleMessage(msg) {
 }
 
 function handleJoin(guild, member) {
+  handleJoinLeave(guild, member, 'join');
+}
+
+
+function handleLeave(guild, member) {
+  handleJoinLeave(guild, member, 'leave');
+}
+
+function handleJoinLeave(guild, member, type) {
   const botName = `${discord.user.username}#${discord.user.discriminator}`;
   const message = {
+    type,
     cid: connector.cid,
     uid: member.id,
-    text: member.username,
+    text: member.username || '',
     channel: guild.id,
-    type: 'join',
     timeReceived: member.joinedAt,
     data: {
       connectorType: 'discord',
