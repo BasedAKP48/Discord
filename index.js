@@ -1,13 +1,12 @@
 const Eris = require('eris');
 const Promise = require('bluebird');
 const inquirer = require('inquirer');
-const path = require('path');
 const utils = require('@basedakp48/plugin-utils');
 const getInternalCommand = require('./internal');
 
 const connector = new utils.Connector({
   name: 'Discord',
-  cidPath: path.resolve('./cid.json'),
+  dir: __dirname,
 });
 
 let status = 'online';
@@ -87,7 +86,7 @@ connector.messageSystem().on('message/text', (msg, ref) => {
           type: 'AKPacket',
           timeReceived: Date.now(),
         };
-        connector.messageSystem().sendMessage(message);
+        return connector.messageSystem().sendMessage(message);
       });
   }
   ref.remove();
