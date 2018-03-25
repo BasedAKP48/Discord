@@ -44,7 +44,7 @@ function getMessageData(message) {
       id: message.channel.id,
       name: message.channel.name,
       parent: message.channel.parentID || null,
-      nsfw: message.channel.nsfw,
+      nsfw: message.channel.nsfw || null,
     },
     user: {
       name,
