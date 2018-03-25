@@ -87,6 +87,13 @@ connector.messageSystem().on('message/text', (msg, ref) => {
           timeReceived: Date.now(),
         };
         return connector.messageSystem().sendMessage(message);
+      })
+      .catch((error) => {
+        if (connector.sendError(error)) {
+          console.log('Error sent');
+        } else {
+          console.error(error);
+        }
       });
   }
   ref.remove();
