@@ -56,25 +56,24 @@ connector.messageSystem().on('message/text', (msg, ref) =>
     .catch(onError)
     .then(() => ref.remove()));
 connector.messageSystem().on('message/internal', (msg, ref) => {
-  if (discord) {
-    getInternalCommand(msg)
-      .then(c => c.getMessage({ connector, discord, message: msg }))
-      .catch(e => ({ error: e.message }))
-      .then((data) => {
-        const message = {
-          data,
-          uid: connector.cid,
-          target: msg.uid,
-          channel: msg.channel,
-          text: msg.text,
-          type: 'AKPacket',
-          timeReceived: Date.now(),
-        };
-        return connector.messageSystem().sendMessage(message);
-      })
-      .catch(onError);
-  }
   ref.remove();
+  if (!discord) return;
+  getInternalCommand(msg)
+    .then(c => c.getMessage({ connector, discord, message: msg }))
+    .catch(e => ({ error: e.message }))
+    .then((data) => {
+      const message = {
+        data,
+        uid: connector.cid,
+        target: msg.uid,
+        channel: msg.channel,
+        text: msg.text,
+        type: 'AKPacket',
+        timeReceived: Date.now(),
+      };
+      return connector.messageSystem().sendMessage(message);
+    })
+    .catch(onError);
 }).on('message/private', (msg, ref) => {
   ref.remove();
   if (!discord) return;
