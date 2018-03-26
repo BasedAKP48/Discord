@@ -51,27 +51,11 @@ connector.presenceSystem().on('status', (statuscode) => {
   discord && discord.editStatus(status);
 });
 
-connector.messageSystem().on('message/text', (msg, ref) => {
-  if (!discord) return ref.remove(); // can't do anything without a bot.
-  return discord.sendChannelTyping(msg.channel)
-    .then(() => Promise.delay(750).then(() => {
-      const content = {
-        content: msg.text,
-      };
-      if (msg.data) {
-        if (msg.data.mention && msg.data.mentionID) {
-          content.content = `<@${msg.data.mentionID}> ${content.content}`;
-        }
-        if (msg.data.discord_embed) {
-          content.embed = msg.data.discord_embed;
-          if (!msg.data.includeText) {
-            delete content.content;
-          }
-        }
-      }
-      return discord.createMessage(msg.channel, content);
-    })).then(() => ref.remove());
-}).on('message/internal', (msg, ref) => {
+connector.messageSystem().on('message/text', (msg, ref) =>
+  sendMessage(msg)
+    .catch(onError)
+    .then(() => ref.remove()));
+connector.messageSystem().on('message/internal', (msg, ref) => {
   if (discord) {
     getInternalCommand(msg)
       .then(c => c.getMessage({ connector, discord, message: msg }))
@@ -88,15 +72,16 @@ connector.messageSystem().on('message/text', (msg, ref) => {
         };
         return connector.messageSystem().sendMessage(message);
       })
-      .catch((error) => {
-        if (connector.sendError(error)) {
-          console.log('Error sent');
-        } else {
-          console.error(error);
-        }
-      });
+      .catch(onError);
   }
   ref.remove();
+}).on('message/private', (msg, ref) => {
+  ref.remove();
+  if (!discord) return;
+  discord.getDMChannel(msg.channel).then((channel) => {
+    msg.channel = channel.id;
+    return sendMessage(msg);
+  }).catch(onError);
 });
 
 function initializeBot(options) {
@@ -198,4 +183,32 @@ function disconnect() {
   discord.editStatus('invisible');
   discord.disconnect({ reconnect: false });
   console.log('disconnected from Discord');
+}
+
+function sendMessage(msg) {
+  if (!discord) return Promise.resolve();
+  return discord.sendChannelTyping(msg.channel)
+    .then(() => Promise.delay(750).then(() => {
+      const content = {
+        content: msg.text,
+      };
+      if (msg.data) {
+        if (msg.data.mention && msg.data.mentionID) {
+          content.content = `<@${msg.data.mentionID}> ${content.content}`;
+        }
+        if (msg.data.discord_embed) {
+          content.embed = msg.data.discord_embed;
+          if (!msg.data.includeText) {
+            delete content.content;
+          }
+        }
+      }
+      return discord.createMessage(msg.channel, content);
+    }));
+}
+
+function onError(error) {
+  if (!connector.sendError(error)) {
+    console.error(error);
+  }
 }
