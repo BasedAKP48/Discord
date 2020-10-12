@@ -192,8 +192,8 @@ function sendMessage(msg) {
         content: msg.text,
       };
       if (msg.data) {
-        if (msg.data.mention && msg.data.mentionID) {
-          content.content = `<@${msg.data.mentionID}> ${content.content}`;
+        if (msg.data.mentionID) {
+          content.content = `<@!{msg.data.mentionID}> ${content.content}`;
         }
         if (msg.data.discord_embed) {
           content.embed = msg.data.discord_embed;
