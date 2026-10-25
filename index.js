@@ -1,6 +1,6 @@
 const Eris = require('eris');
-const Promise = require('bluebird');
-const inquirer = require('inquirer');
+const readline = require('readline');
+const { promisify } = require('util');
 const utils = require('@basedakp48/plugin-utils');
 const getInternalCommand = require('./internal');
 
@@ -8,6 +8,8 @@ const connector = new utils.Connector({
   name: 'Discord',
   dir: __dirname,
 });
+
+const delay = promisify(setTimeout);
 
 let status = 'online';
 let game = {};
@@ -86,7 +88,7 @@ connector.messageSystem().on('message/internal', (msg, ref) => {
 function initializeBot(options) {
   if (discord || !token) return;
   discord = new Eris(token, {
-    // options will go here later.
+    intents: ['guilds', 'guildMembers', 'guildMessages', 'directMessages', 'messageContent'],
   });
 
   discord.on('error', msg => console.log('Error: ', msg));
@@ -169,12 +171,13 @@ function handleJoinLeave(guild, member, type) {
   connector.messageSystem().sendMessage(message);
 }
 
-function prompt(ref) {
-  inquirer.prompt([{ name: 'token', message: "Enter your bot's Discord token:" }]).then((vals) => {
-    if (vals.token) {
-      ref.update({ token: vals.token });
-    }
-  });
+async function prompt(ref) {
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  const answer = await new Promise(res => rl.question("Enter your bot's Discord token: ", res));
+  rl.close();
+  if (answer) {
+    ref.update({ token: answer });
+  }
 }
 
 function disconnect() {
@@ -187,7 +190,7 @@ function disconnect() {
 function sendMessage(msg) {
   if (!discord) return Promise.resolve();
   return discord.sendChannelTyping(msg.channel)
-    .then(() => Promise.delay(750).then(() => {
+    .then(() => delay(750).then(() => {
       const content = {
         content: msg.text,
       };
@@ -196,7 +199,7 @@ function sendMessage(msg) {
           content.content = `<@!{msg.data.mentionID}> ${content.content}`;
         }
         if (msg.data.discord_embed) {
-          content.embed = msg.data.discord_embed;
+          content.embeds = [msg.data.discord_embed];
           if (!msg.data.includeText) {
             delete content.content;
           }

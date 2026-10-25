@@ -1,5 +1,4 @@
-const Promise = require('bluebird');
-const fs = Promise.promisifyAll(require('fs'));
+const fs = require('fs').promises;
 const Command = require('./command');
 
 /**
@@ -8,7 +7,7 @@ const Command = require('./command');
 const commands = new Map();
 
 // Parse all the internal functions and commands
-fs.readdirAsync(__dirname).then(files => files.forEach((file) => {
+fs.readdir(__dirname).then(files => files.forEach((file) => {
   if (file.startsWith('.') || !file.match(/\.command\.js$/)) return;
   // eslint-disable-next-line global-require, import/no-dynamic-require
   const command = require(`./${file}`);
