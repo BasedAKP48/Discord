@@ -6,8 +6,10 @@ const getInternalCommand = require('./internal');
 const {
   buildInteractionMessage,
   createInteractionHandler,
+  createPageHandler,
   createRelay,
 } = require('./src/interactions');
+const { attachPages, createPager } = require('./src/pager');
 const { GLOBAL, planSync, reconcile } = require('./src/slash');
 const { readTyped } = require('./src/typed');
 
@@ -35,6 +37,8 @@ const commands = new Map();
 const synced = new Map();
 const reported = new Set();
 const relay = createRelay({ onError });
+const pager = createPager();
+const handlePage = createPageHandler({ pager });
 const handleInteraction = createInteractionHandler({
   relay,
   prefix: PREFIX,
@@ -141,7 +145,9 @@ function initializeBot(options) {
     scheduleSync();
   });
 
-  discord.on('interactionCreate', interaction => handleInteraction(interaction).catch(onError));
+  discord.on('interactionCreate', interaction => handlePage(interaction)
+    .then(handled => handled || handleInteraction(interaction))
+    .catch(onError));
 
   discord.on('messageCreate', handleMessage)
     .on('guildMemberRemove', handleLeave)
@@ -257,6 +263,7 @@ function messageContent(msg) {
         delete content.content;
       }
     }
+    return attachPages(pager, content, msg.data.discord_pages);
   }
   return content;
 }
@@ -264,7 +271,8 @@ function messageContent(msg) {
 function sendMessage(msg) {
   if (!discord) return Promise.resolve();
   return discord.sendChannelTyping(msg.channel)
-    .then(() => delay(750).then(() => discord.createMessage(msg.channel, messageContent(msg))));
+    .then(() => delay(750)
+      .then(() => discord.createMessage(msg.channel, messageContent(msg))));
 }
 
 async function answerInteraction(msg, options) {

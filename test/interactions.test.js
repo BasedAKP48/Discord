@@ -181,7 +181,7 @@ const commands = new Map([
     name: 'balance', args: [{ name: 'currency' }], online: true, private: true,
   }],
   ['say', {
-    name: 'say', args: [{ name: 'text' }], online: true,
+    name: 'say', args: [{ name: 'text' }, { name: 'private' }], online: true,
   }],
   ['gone', { name: 'gone', online: false }],
 ]);
@@ -224,6 +224,24 @@ test('a public command defers publicly', async () => {
 
   assert.deepEqual(interaction.calls, [['defer', 0]]);
   assert.equal(sent[0].text, '.say hello there');
+});
+
+test('a public command defers privately when the person asks for a private answer', async () => {
+  const { handle, sent } = createHandler();
+  const asked = createInteraction('i2a', {
+    data: { type: 1, name: 'say', options: [{ name: 'private', value: true }] },
+  });
+  const declined = createInteraction('i2b', {
+    data: { type: 1, name: 'say', options: [{ name: 'private', value: false }] },
+  });
+
+  await handle(asked);
+  await handle(declined);
+
+  assert.deepEqual(asked.calls, [['defer', EPHEMERAL]]);
+  assert.deepEqual(declined.calls, [['defer', 0]]);
+  assert.equal(relay.has('i2a'), true);
+  assert.equal(sent.length, 2);
 });
 
 test('a command that is gone or offline is answered privately and never sent', async () => {

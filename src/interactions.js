@@ -4,6 +4,8 @@ const EPHEMERAL = 64;
 const APPLICATION_COMMAND = 2;
 const CHAT_INPUT = 1;
 const NO_RESPONSE = 'That command did not get a response.';
+const MESSAGE_COMPONENT = 3;
+const EXPIRED = 'That list has expired. Run the command again for a fresh one.';
 
 function createRelay({
   timeout = 30000,
@@ -129,26 +131,43 @@ function createInteractionHandler({
     }
 
     const text = commandText(prefix, command, interaction.data.options);
-    const message = buildMessage(interaction, text, {
-      command: command.name,
-      args: commandArgs(command, interaction.data.options),
-    });
+    const args = commandArgs(command, interaction.data.options);
+    const message = buildMessage(interaction, text, { command: command.name, args });
     if (!isAllowed(command, message)) {
       await interaction.createMessage({ content: 'That command is not available here.', flags: EPHEMERAL });
       return;
     }
 
-    const ephemeral = command.private === true;
+    const ephemeral = command.private === true || args.private === true;
     await interaction.defer(ephemeral ? EPHEMERAL : 0);
     relay.track(interaction, { ephemeral });
     await send(message);
   };
 }
 
+function createPageHandler({ pager }) {
+  return async function handlePage(interaction) {
+    if (interaction.type !== MESSAGE_COMPONENT || !interaction.data) return false;
+    const parsed = pager.parse(interaction.data.custom_id);
+    if (!parsed) return false;
+
+    const opened = pager.open(parsed.key, parsed.index);
+    if (!opened) {
+      await interaction.editParent({ components: [] });
+      await interaction.createFollowup({ content: EXPIRED, flags: EPHEMERAL });
+      return true;
+    }
+    await interaction.editParent({ embeds: opened.embeds, components: opened.components });
+    return true;
+  };
+}
+
 module.exports = {
   EPHEMERAL,
+  EXPIRED,
   NO_RESPONSE,
   buildInteractionMessage,
   createInteractionHandler,
+  createPageHandler,
   createRelay,
 };

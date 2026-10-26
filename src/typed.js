@@ -14,7 +14,11 @@ function readTyped(message, {
     message: {
       ...message,
       type: 'command',
-      data: { ...message.data, command: parsed.command.name, args: parsed.args },
+      data: {
+        ...message.data,
+        command: parsed.command.name,
+        args: parsed.args,
+      },
     },
   };
 }
