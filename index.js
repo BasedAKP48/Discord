@@ -28,6 +28,7 @@ let name;
 let discord;
 let slashEnabled = false;
 let commandGuild;
+let syncedGuild;
 let lastSync;
 let syncTimer;
 
@@ -294,6 +295,10 @@ async function syncCommands() {
   await (commandGuild
     ? discord.bulkEditGuildCommands(commandGuild, body)
     : discord.bulkEditCommands(body));
+  if (syncedGuild && syncedGuild !== commandGuild) {
+    await discord.bulkEditGuildCommands(syncedGuild, []);
+  }
+  syncedGuild = commandGuild;
   lastSync = signature;
   console.log(`registered ${payload.length} slash commands (${target})`);
 }
