@@ -1,4 +1,4 @@
-const { commandText } = require('./slash');
+const { commandArgs, commandText } = require('./slash');
 
 const EPHEMERAL = 64;
 const APPLICATION_COMMAND = 2;
@@ -75,7 +75,7 @@ function createRelay({
   };
 }
 
-function buildInteractionMessage(interaction, text, { cid, connectorName, botName }) {
+function buildInteractionMessage(interaction, text, { cid, connectorName, botName }, parsed) {
   const author = interaction.member ? interaction.member.user : interaction.user;
   const { channel } = interaction;
   const guild = channel.guild || null;
@@ -85,7 +85,7 @@ function buildInteractionMessage(interaction, text, { cid, connectorName, botNam
     cid,
     uid: author.id,
     channel: channel.id,
-    type: 'text',
+    type: 'command',
     timeReceived: Date.now(),
     data: {
       channel: `#${(guild && channel.name) || 'DirectMessage'}`,
@@ -100,6 +100,8 @@ function buildInteractionMessage(interaction, text, { cid, connectorName, botNam
       connectorBotName: botName,
       isPM: !interaction.guildID || null,
       interactionId: interaction.id,
+      command: parsed.command,
+      args: parsed.args,
     },
   };
 }
@@ -127,7 +129,10 @@ function createInteractionHandler({
     }
 
     const text = commandText(prefix, command, interaction.data.options);
-    const message = buildMessage(interaction, text);
+    const message = buildMessage(interaction, text, {
+      command: command.name,
+      args: commandArgs(command, interaction.data.options),
+    });
     if (!isAllowed(command, message)) {
       await interaction.createMessage({ content: 'That command is not available here.', flags: EPHEMERAL });
       return;

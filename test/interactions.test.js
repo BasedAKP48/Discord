@@ -192,7 +192,7 @@ const createHandler = () => {
     relay,
     getCommands: () => commands,
     send: async (message) => { sent.push(message); },
-    buildMessage: (interaction, text) => ({ text, interactionId: interaction.id }),
+    buildMessage: (interaction, text, parsed) => ({ text, interactionId: interaction.id, parsed }),
   });
   return { handle, sent };
 };
@@ -207,7 +207,11 @@ test('a private command defers privately, is tracked, and is sent as text', asyn
 
   assert.deepEqual(interaction.calls, [['defer', EPHEMERAL]]);
   assert.equal(relay.has('i1'), true);
-  assert.deepEqual(sent, [{ text: '.balance GEM', interactionId: 'i1' }]);
+  assert.deepEqual(sent, [{
+    text: '.balance GEM',
+    interactionId: 'i1',
+    parsed: { command: 'balance', args: { currency: 'GEM' } },
+  }]);
 });
 
 test('a public command defers publicly', async () => {
@@ -268,6 +272,8 @@ test('a failure to send is passed on, and the unanswered command still times out
 
 const context = { cid: 'fmbot-cid', connectorName: 'Main', botName: 'fmbot#0' };
 
+const balance = { command: 'balance', args: { currency: 'GEM' } };
+
 test('a command run in a server describes the sender like a normal message does', () => {
   const interaction = createInteraction('i9', {
     guildID: 'g1',
@@ -282,10 +288,10 @@ test('a command run in a server describes the sender like a normal message does'
     },
   });
 
-  const message = buildInteractionMessage(interaction, '.balance GEM', context);
+  const message = buildInteractionMessage(interaction, '.balance GEM', context, balance);
 
   assert.equal(message.text, '.balance GEM');
-  assert.equal(message.type, 'text');
+  assert.equal(message.type, 'command');
   assert.equal(message.cid, 'fmbot-cid');
   assert.equal(message.uid, 'u1');
   assert.equal(message.channel, 'c1');
@@ -303,6 +309,8 @@ test('a command run in a server describes the sender like a normal message does'
     connectorBotName: 'fmbot#0',
     isPM: null,
     interactionId: 'i9',
+    command: 'balance',
+    args: { currency: 'GEM' },
   });
 });
 
@@ -314,7 +322,7 @@ test('a command run in a direct message is marked as one and has no server', () 
     },
   });
 
-  const { data, uid } = buildInteractionMessage(interaction, '.balance', context);
+  const { data, uid } = buildInteractionMessage(interaction, '.balance', context, balance);
 
   assert.equal(uid, 'u2');
   assert.equal(data.isPM, true);
@@ -337,7 +345,7 @@ test('a sender without a nickname falls back to the username, and a missing bot 
     },
   });
 
-  const { data } = buildInteractionMessage(interaction, '.x', { cid: 'c', botName: 'b#0' });
+  const { data } = buildInteractionMessage(interaction, '.x', { cid: 'c', botName: 'b#0' }, balance);
 
   assert.equal(data.nick, 'kim');
   assert.equal(data.connectorName, null);
@@ -356,7 +364,7 @@ test('the message carries no undefined values, which the database would refuse',
     },
   });
 
-  const message = buildInteractionMessage(interaction, '.x', context);
+  const message = buildInteractionMessage(interaction, '.x', context, balance);
   const walk = value => Object.values(value).every(v => v !== undefined
     && (v === null || typeof v !== 'object' || walk(v)));
 

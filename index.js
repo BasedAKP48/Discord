@@ -9,6 +9,7 @@ const {
   createRelay,
 } = require('./src/interactions');
 const { GLOBAL, planSync, reconcile } = require('./src/slash');
+const { readTyped } = require('./src/typed');
 
 const connector = new utils.Connector({
   name: 'Discord',
@@ -39,11 +40,11 @@ const handleInteraction = createInteractionHandler({
   prefix: PREFIX,
   isAllowed: utils.allowedHere,
   getCommands: () => commands,
-  buildMessage: (interaction, text) => buildInteractionMessage(interaction, text, {
+  buildMessage: (interaction, text, parsed) => buildInteractionMessage(interaction, text, {
     cid: connector.cid,
     connectorName: name,
     botName: `${discord.user.username}#${discord.user.discriminator}`,
-  }),
+  }, parsed),
   send: message => connector.messageSystem().sendMessage(message),
 });
 
@@ -62,7 +63,7 @@ connector.on('config', (config, ref) => {
 
   slashEnabled = config.slashCommands === true;
   commandGuild = config.commandGuild || undefined;
-  scheduleSync();
+  scheduleSync(commands.size ? SYNC_DELAY : 0);
 
   if (config.name !== name) {
     name = config.name;
@@ -123,7 +124,7 @@ connector.messageSystem().on('message/internal', (msg, ref) => {
     .catch(onError);
 });
 
-connector.root.child('registry').on('value', scheduleSync);
+connector.root.child('registry').on('value', () => scheduleSync());
 setInterval(scheduleSync, SYNC_REFRESH).unref();
 
 function initializeBot(options) {
@@ -182,7 +183,18 @@ function handleMessage(msg) {
     timeReceived: msg.timestamp,
   };
 
-  connector.messageSystem().sendMessage(BasedAKP48Msg);
+  const typed = readTyped(BasedAKP48Msg, {
+    commands,
+    parse: utils.parseCommand,
+    usage: utils.commandUsage,
+    prefix: PREFIX,
+    isAllowed: utils.allowedHere,
+  });
+  if (typed && typed.reply) {
+    discord.createMessage(msg.channel.id, { content: typed.reply }).catch(onError);
+    return;
+  }
+  connector.messageSystem().sendMessage(typed ? typed.message : BasedAKP48Msg);
 }
 
 function handleJoin(guild, member) {
@@ -261,10 +273,9 @@ async function answerInteraction(msg, options) {
   return relay.reply(id, messageContent(msg), options);
 }
 
-function scheduleSync() {
-  if (!slashEnabled) return;
+function scheduleSync(delayMs = SYNC_DELAY) {
   clearTimeout(syncTimer);
-  syncTimer = setTimeout(() => syncCommands().catch(onError), SYNC_DELAY);
+  syncTimer = setTimeout(() => syncCommands().catch(onError), delayMs);
 }
 
 function reportOnce(text) {
@@ -274,8 +285,6 @@ function reportOnce(text) {
 }
 
 async function syncCommands() {
-  if (!slashEnabled || !discord || !discord.application) return;
-
   const found = await utils.collectCommands(connector.root);
   commands.clear();
   found.commands.forEach(command => commands.set(command.name, command));
@@ -285,6 +294,8 @@ async function syncCommands() {
   found.invalid.forEach(({ name: invalid, cid, problems }) => {
     reportOnce(`command ${invalid} from ${cid} is invalid: ${problems.join('; ')}`);
   });
+
+  if (!slashEnabled || !discord || !discord.application) return;
 
   const plan = planSync(found.commands, { commandGuild, guildsOf: utils.commandGuilds });
   const { updates, clears } = reconcile(plan, synced);

@@ -80,17 +80,44 @@ function reconcile(plan, synced) {
   return { updates, clears };
 }
 
+const isText = arg => arg.type === 'string';
+
 function commandText(prefix, command, options = []) {
   const values = new Map((options || []).map(option => [option.name, option.value]));
-  const args = (command.args || [])
+  const args = command.args || [];
+  const words = [];
+  for (let index = 0; index < args.length;) {
+    if (!isText(args[index])) {
+      if (values.has(args[index].name)) words.push(String(values.get(args[index].name)));
+      index += 1;
+    } else {
+      let stop = index;
+      while (stop < args.length && isText(args[stop])) stop += 1;
+      const run = args.slice(index, stop);
+      const last = run.map(arg => values.has(arg.name)).lastIndexOf(true);
+      if (last !== -1) {
+        words.push(run.slice(0, last + 1)
+          .map(arg => (values.has(arg.name) ? String(values.get(arg.name)) : ''))
+          .join(' | ')
+          .trim());
+      }
+      index = stop;
+    }
+  }
+  return [`${prefix}${command.name}`, ...words].join(' ');
+}
+
+function commandArgs(command, options) {
+  const values = new Map((options || []).map(option => [option.name, option.value]));
+  return (command.args || [])
     .filter(arg => values.has(arg.name))
-    .map(arg => String(values.get(arg.name)));
-  return [`${prefix}${command.name}`, ...args].join(' ');
+    .reduce((args, arg) => ({ ...args, [arg.name]: values.get(arg.name) }), {});
 }
 
 module.exports = {
   GLOBAL,
   MAX_COMMANDS,
+  commandArgs,
   commandText,
   hashCommands,
   planSync,

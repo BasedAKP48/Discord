@@ -3,6 +3,7 @@ const { test } = require('node:test');
 
 const {
   MAX_COMMANDS,
+  commandArgs,
   commandText,
   hashCommands,
   toDiscordCommands,
@@ -107,6 +108,35 @@ test('options become words in the order the definition lists them', () => {
   ];
 
   assert.equal(commandText('.', command, options), '.roll 20 for fun true');
+});
+
+test('text options that follow each other are split with a bar, so a typed command can tell them apart', () => {
+  const command = {
+    name: 'add',
+    args: [
+      { name: 'id', type: 'integer' },
+      { name: 'title', type: 'string' },
+      { name: 'description', type: 'string' },
+    ],
+  };
+  const title = { name: 'title', value: 'Dark mode' };
+  const description = { name: 'description', value: 'For night owls' };
+
+  assert.equal(commandText('.', command, [{ name: 'id', value: 3 }, title, description]), '.add 3 Dark mode | For night owls');
+  assert.equal(commandText('.', command, [title, description]), '.add Dark mode | For night owls');
+  assert.equal(commandText('.', command, [{ name: 'id', value: 3 }, title]), '.add 3 Dark mode');
+  assert.equal(commandText('.', command, [{ name: 'id', value: 3 }, description]), '.add 3 | For night owls');
+  assert.equal(commandText('.', command, [description]), '.add | For night owls');
+});
+
+test('options become named arguments, and only the ones filled in are there', () => {
+  const command = { name: 'edit', args: [{ name: 'id' }, { name: 'title' }, { name: 'description' }] };
+  const options = [{ name: 'description', value: 'x' }, { name: 'id', value: 3 }, { name: 'other', value: 1 }];
+
+  assert.deepEqual(commandArgs(command, options), { id: 3, description: 'x' });
+  assert.deepEqual(commandArgs(command, undefined), {});
+  assert.deepEqual(commandArgs({ name: 'ping' }, options), {});
+  assert.deepEqual(commandArgs(command, [{ name: 'id', value: 0 }, { name: 'title', value: '' }]), { id: 0, title: '' });
 });
 
 test('options that were not filled in are left out', () => {
