@@ -3,6 +3,12 @@ const readline = require('readline');
 const { promisify } = require('util');
 const utils = require('@basedakp48/plugin-utils');
 const getInternalCommand = require('./internal');
+const {
+  buildInteractionMessage,
+  createInteractionHandler,
+  createRelay,
+} = require('./src/interactions');
+const { hashCommands, toDiscordCommands } = require('./src/slash');
 
 const connector = new utils.Connector({
   name: 'Discord',
@@ -11,11 +17,34 @@ const connector = new utils.Connector({
 
 const delay = promisify(setTimeout);
 
+const PREFIX = '.';
+const SYNC_DELAY = 5000;
+const SYNC_REFRESH = 10 * 60 * 1000;
+
 let status = 'online';
 let game = {};
 let token;
 let name;
 let discord;
+let slashEnabled = false;
+let commandGuild;
+let lastSync;
+let syncTimer;
+
+const commands = new Map();
+const reported = new Set();
+const relay = createRelay({ onError });
+const handleInteraction = createInteractionHandler({
+  relay,
+  prefix: PREFIX,
+  getCommands: () => commands,
+  buildMessage: (interaction, text) => buildInteractionMessage(interaction, text, {
+    cid: connector.cid,
+    connectorName: name,
+    botName: `${discord.user.username}#${discord.user.discriminator}`,
+  }),
+  send: message => connector.messageSystem().sendMessage(message),
+});
 
 connector.on('config', (config, ref) => {
   if (!config || !config.token) {
@@ -27,7 +56,12 @@ connector.on('config', (config, ref) => {
     console.log('reconnecting with new token');
     disconnect();
     discord = null;
+    lastSync = undefined;
   }
+
+  slashEnabled = config.slashCommands === true;
+  commandGuild = config.commandGuild || undefined;
+  scheduleSync();
 
   if (config.name !== name) {
     name = config.name;
@@ -54,7 +88,8 @@ connector.presenceSystem().on('status', (statuscode) => {
 });
 
 connector.messageSystem().on('message/text', (msg, ref) =>
-  sendMessage(msg)
+  answerInteraction(msg)
+    .then(answered => answered || sendMessage(msg))
     .catch(onError)
     .then(() => ref.remove()));
 connector.messageSystem().on('message/internal', (msg, ref) => {
@@ -79,11 +114,16 @@ connector.messageSystem().on('message/internal', (msg, ref) => {
 }).on('message/private', (msg, ref) => {
   ref.remove();
   if (!discord) return;
-  discord.getDMChannel(msg.channel).then((channel) => {
-    msg.channel = channel.id;
-    return sendMessage(msg);
-  }).catch(onError);
+  answerInteraction(msg, { private: true })
+    .then(answered => answered || discord.getDMChannel(msg.channel).then((channel) => {
+      msg.channel = channel.id;
+      return sendMessage(msg);
+    }))
+    .catch(onError);
 });
+
+connector.root.child('registry').on('value', scheduleSync);
+setInterval(scheduleSync, SYNC_REFRESH).unref();
 
 function initializeBot(options) {
   if (discord || !token) return;
@@ -96,7 +136,10 @@ function initializeBot(options) {
   discord.on('ready', () => {
     console.log('connected to Discord');
     discord.editStatus(status, game);
+    scheduleSync();
   });
+
+  discord.on('interactionCreate', interaction => handleInteraction(interaction).catch(onError));
 
   discord.on('messageCreate', handleMessage)
     .on('guildMemberRemove', handleLeave)
@@ -187,26 +230,72 @@ function disconnect() {
   console.log('disconnected from Discord');
 }
 
+function messageContent(msg) {
+  const content = {
+    content: msg.text,
+  };
+  if (msg.data) {
+    if (msg.data.mentionID) {
+      content.content = `<@!${msg.data.mentionID}> ${content.content}`;
+    }
+    if (msg.data.discord_embed) {
+      content.embeds = [msg.data.discord_embed];
+      if (!msg.data.includeText) {
+        delete content.content;
+      }
+    }
+  }
+  return content;
+}
+
 function sendMessage(msg) {
   if (!discord) return Promise.resolve();
   return discord.sendChannelTyping(msg.channel)
-    .then(() => delay(750).then(() => {
-      const content = {
-        content: msg.text,
-      };
-      if (msg.data) {
-        if (msg.data.mentionID) {
-          content.content = `<@!{msg.data.mentionID}> ${content.content}`;
-        }
-        if (msg.data.discord_embed) {
-          content.embeds = [msg.data.discord_embed];
-          if (!msg.data.includeText) {
-            delete content.content;
-          }
-        }
-      }
-      return discord.createMessage(msg.channel, content);
-    }));
+    .then(() => delay(750).then(() => discord.createMessage(msg.channel, messageContent(msg))));
+}
+
+async function answerInteraction(msg, options) {
+  const id = msg.data && msg.data.interactionId;
+  if (!id || !relay.has(id)) return false;
+  return relay.reply(id, messageContent(msg), options);
+}
+
+function scheduleSync() {
+  if (!slashEnabled) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => syncCommands().catch(onError), SYNC_DELAY);
+}
+
+function reportOnce(text) {
+  if (reported.has(text)) return;
+  reported.add(text);
+  console.log(text);
+}
+
+async function syncCommands() {
+  if (!slashEnabled || !discord || !discord.application) return;
+
+  const found = await utils.collectCommands(connector.root);
+  commands.clear();
+  found.commands.forEach(command => commands.set(command.name, command));
+  found.conflicts.forEach(({ name: conflict, cid, winner }) => {
+    reportOnce(`command ${conflict} from ${cid} is ignored, ${winner} already offers it`);
+  });
+  found.invalid.forEach(({ name: invalid, cid, problems }) => {
+    reportOnce(`command ${invalid} from ${cid} is invalid: ${problems.join('; ')}`);
+  });
+
+  const payload = toDiscordCommands(found.commands);
+  const target = commandGuild || 'global';
+  const signature = `${target}:${hashCommands(payload)}`;
+  if (signature === lastSync) return;
+
+  const body = JSON.parse(JSON.stringify(payload));
+  await (commandGuild
+    ? discord.bulkEditGuildCommands(commandGuild, body)
+    : discord.bulkEditCommands(body));
+  lastSync = signature;
+  console.log(`registered ${payload.length} slash commands (${target})`);
 }
 
 function onError(error) {
