@@ -120,3 +120,107 @@ test('options that were not filled in are left out', () => {
 test('a command with no args is just its name behind the prefix', () => {
   assert.equal(commandText('!', { name: 'ping' }, [{ name: 'ignored', value: 'x' }]), '!ping');
 });
+
+const { GLOBAL, planSync, reconcile } = require('../src/slash');
+const { commandGuilds } = require('@basedakp48/plugin-utils');
+
+const cmd = (name, guilds) => ({
+  name, description: `The ${name} command`, ...(guilds ? { discord: { guilds } } : {}),
+});
+const names = payload => payload.map(command => command.name);
+
+test('commands with no server list are registered everywhere, the rest only where they are listed', () => {
+  const plan = planSync(
+    [cmd('balance'), cmd('feature-bid', ['1']), cmd('feature-add', ['1', '2']), cmd('say', ['*'])],
+    { guildsOf: commandGuilds },
+  );
+
+  assert.deepEqual(names(plan.global), ['balance', 'say']);
+  assert.deepEqual([...plan.guilds.keys()].sort(), ['1', '2']);
+  assert.deepEqual(names(plan.guilds.get('1')), ['feature-add', 'feature-bid']);
+  assert.deepEqual(names(plan.guilds.get('2')), ['feature-add']);
+});
+
+test('server lists are matched as text, and a plan with no scoped commands has no servers', () => {
+  assert.deepEqual([...planSync([cmd('a', [7])], { guildsOf: commandGuilds }).guilds.keys()], ['7']);
+  assert.equal(planSync([cmd('a')], { guildsOf: commandGuilds }).guilds.size, 0);
+});
+
+test('the test server setting puts everything in one server and leaves the global list alone', () => {
+  const plan = planSync(
+    [cmd('balance'), cmd('feature-bid', ['1'])],
+    { commandGuild: '99', guildsOf: commandGuilds },
+  );
+
+  assert.equal(plan.global, undefined);
+  assert.deepEqual([...plan.guilds.keys()], ['99']);
+  assert.deepEqual(names(plan.guilds.get('99')), ['balance', 'feature-bid']);
+});
+
+test('the first sync sends everything, including an empty global list', () => {
+  const plan = planSync([cmd('feature-bid', ['1'])], { guildsOf: commandGuilds });
+
+  const { updates, clears } = reconcile(plan, new Map());
+
+  assert.deepEqual(updates.map(update => update.target).sort(), ['1', GLOBAL].sort());
+  assert.deepEqual(updates.find(update => update.target === GLOBAL).payload, []);
+  assert.deepEqual(clears, []);
+});
+
+test('only what changed is sent again', () => {
+  const first = planSync([cmd('balance'), cmd('feature-bid', ['1'])], { guildsOf: commandGuilds });
+  const synced = new Map(reconcile(first, new Map()).updates.map(u => [u.target, u.hash]));
+
+  const same = reconcile(first, synced);
+  assert.deepEqual(same, { updates: [], clears: [] });
+
+  const changed = planSync(
+    [cmd('balance'), { ...cmd('feature-bid', ['1']), description: 'New text' }],
+    { guildsOf: commandGuilds },
+  );
+  const { updates } = reconcile(changed, synced);
+  assert.deepEqual(updates.map(update => update.target), ['1']);
+});
+
+test('a server that no command is listed for any more is emptied', () => {
+  const before = planSync([cmd('feature-bid', ['1', '2'])], { guildsOf: commandGuilds });
+  const synced = new Map(reconcile(before, new Map()).updates.map(u => [u.target, u.hash]));
+
+  const after = planSync([cmd('feature-bid', ['1'])], { guildsOf: commandGuilds });
+
+  assert.deepEqual(reconcile(after, synced).clears, ['2']);
+});
+
+test('moving a command from one server to global empties the server and fills the global list', () => {
+  const before = planSync([cmd('feature-bid', ['1'])], { guildsOf: commandGuilds });
+  const synced = new Map(reconcile(before, new Map()).updates.map(u => [u.target, u.hash]));
+
+  const after = planSync([cmd('feature-bid')], { guildsOf: commandGuilds });
+  const { updates, clears } = reconcile(after, synced);
+
+  assert.deepEqual(clears, ['1']);
+  assert.deepEqual(updates.map(update => update.target), [GLOBAL]);
+  assert.deepEqual(names(updates[0].payload), ['feature-bid']);
+});
+
+test('switching the test server off clears it and brings the global list back', () => {
+  const dev = planSync([cmd('balance')], { commandGuild: '99', guildsOf: commandGuilds });
+  const synced = new Map(reconcile(dev, new Map()).updates.map(u => [u.target, u.hash]));
+  assert.equal(synced.has(GLOBAL), false);
+
+  const normal = planSync([cmd('balance')], { guildsOf: commandGuilds });
+  const { updates, clears } = reconcile(normal, synced);
+
+  assert.deepEqual(clears, ['99']);
+  assert.deepEqual(updates.map(update => update.target), [GLOBAL]);
+});
+
+test('the global list is never emptied by the test server setting', () => {
+  const normal = planSync([cmd('balance')], { guildsOf: commandGuilds });
+  const synced = new Map(reconcile(normal, new Map()).updates.map(u => [u.target, u.hash]));
+
+  const dev = planSync([cmd('balance')], { commandGuild: '99', guildsOf: commandGuilds });
+  const { clears } = reconcile(dev, synced);
+
+  assert.deepEqual(clears, []);
+});

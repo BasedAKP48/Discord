@@ -8,7 +8,7 @@ const {
   createInteractionHandler,
   createRelay,
 } = require('./src/interactions');
-const { hashCommands, toDiscordCommands } = require('./src/slash');
+const { GLOBAL, planSync, reconcile } = require('./src/slash');
 
 const connector = new utils.Connector({
   name: 'Discord',
@@ -28,16 +28,16 @@ let name;
 let discord;
 let slashEnabled = false;
 let commandGuild;
-let syncedGuild;
-let lastSync;
 let syncTimer;
 
 const commands = new Map();
+const synced = new Map();
 const reported = new Set();
 const relay = createRelay({ onError });
 const handleInteraction = createInteractionHandler({
   relay,
   prefix: PREFIX,
+  isAllowed: utils.allowedHere,
   getCommands: () => commands,
   buildMessage: (interaction, text) => buildInteractionMessage(interaction, text, {
     cid: connector.cid,
@@ -57,7 +57,7 @@ connector.on('config', (config, ref) => {
     console.log('reconnecting with new token');
     disconnect();
     discord = null;
-    lastSync = undefined;
+    synced.clear();
   }
 
   slashEnabled = config.slashCommands === true;
@@ -286,21 +286,28 @@ async function syncCommands() {
     reportOnce(`command ${invalid} from ${cid} is invalid: ${problems.join('; ')}`);
   });
 
-  const payload = toDiscordCommands(found.commands);
-  const target = commandGuild || 'global';
-  const signature = `${target}:${hashCommands(payload)}`;
-  if (signature === lastSync) return;
+  const plan = planSync(found.commands, { commandGuild, guildsOf: utils.commandGuilds });
+  const { updates, clears } = reconcile(plan, synced);
 
-  const body = JSON.parse(JSON.stringify(payload));
-  await (commandGuild
-    ? discord.bulkEditGuildCommands(commandGuild, body)
-    : discord.bulkEditCommands(body));
-  if (syncedGuild && syncedGuild !== commandGuild) {
-    await discord.bulkEditGuildCommands(syncedGuild, []);
-  }
-  syncedGuild = commandGuild;
-  lastSync = signature;
-  console.log(`registered ${payload.length} slash commands (${target})`);
+  const attempt = (target, task) => task().catch((error) => {
+    reportOnce(`could not update the slash commands of ${target}: ${error.message}`);
+  });
+  const sequence = (items, task) => items
+    .reduce((chain, item) => chain.then(() => task(item)), Promise.resolve());
+
+  await sequence(updates, ({ target, payload, hash }) => attempt(target, async () => {
+    const body = JSON.parse(JSON.stringify(payload));
+    await (target === GLOBAL
+      ? discord.bulkEditCommands(body)
+      : discord.bulkEditGuildCommands(target, body));
+    synced.set(target, hash);
+    console.log(`registered ${payload.length} slash commands (${target})`);
+  }));
+  await sequence(clears, id => attempt(id, async () => {
+    await discord.bulkEditGuildCommands(id, []);
+    synced.delete(id);
+    console.log(`removed the slash commands of ${id}`);
+  }));
 }
 
 function onError(error) {

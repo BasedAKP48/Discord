@@ -109,6 +109,7 @@ function createInteractionHandler({
   getCommands,
   send,
   buildMessage,
+  isAllowed = () => true,
   prefix = '.',
 }) {
   return async function handle(interaction) {
@@ -125,10 +126,17 @@ function createInteractionHandler({
       return;
     }
 
+    const text = commandText(prefix, command, interaction.data.options);
+    const message = buildMessage(interaction, text);
+    if (!isAllowed(command, message)) {
+      await interaction.createMessage({ content: 'That command is not available here.', flags: EPHEMERAL });
+      return;
+    }
+
     const ephemeral = command.private === true;
     await interaction.defer(ephemeral ? EPHEMERAL : 0);
     relay.track(interaction, { ephemeral });
-    await send(buildMessage(interaction, commandText(prefix, command, interaction.data.options)));
+    await send(message);
   };
 }
 

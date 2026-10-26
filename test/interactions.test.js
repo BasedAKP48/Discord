@@ -362,3 +362,41 @@ test('the message carries no undefined values, which the database would refuse',
 
   assert.equal(walk(message), true);
 });
+
+test('a command that is not allowed where it was run is refused privately and never sent', async () => {
+  const sent = [];
+  const handle = createInteractionHandler({
+    relay,
+    getCommands: () => commands,
+    send: async (message) => { sent.push(message); },
+    buildMessage: (interaction, text) => ({ text, data: { serverID: interaction.guildID } }),
+    isAllowed: (command, message) => message.data.serverID === 'g1',
+  });
+  const refused = createInteraction('i20', { guildID: 'g2', data: { type: 1, name: 'say' } });
+  const allowed = createInteraction('i21', { guildID: 'g1', data: { type: 1, name: 'say' } });
+
+  await handle(refused);
+  await handle(allowed);
+
+  assert.deepEqual(refused.calls, [['createMessage', { content: 'That command is not available here.', flags: EPHEMERAL }]]);
+  assert.equal(relay.has('i20'), false);
+  assert.deepEqual(allowed.calls.map(([name]) => name), ['defer']);
+  assert.equal(sent.length, 1);
+});
+
+test('the check is given the command and the message the plugins would see', async () => {
+  const seen = [];
+  const handle = createInteractionHandler({
+    relay,
+    getCommands: () => commands,
+    send: async () => {},
+    buildMessage: (interaction, text) => ({ text }),
+    isAllowed: (command, message) => { seen.push([command.name, message.text]); return true; },
+  });
+
+  await handle(createInteraction('i22', {
+    data: { type: 1, name: 'say', options: [{ name: 'text', value: 'hello' }] },
+  }));
+
+  assert.deepEqual(seen, [['say', '.say hello']]);
+});
