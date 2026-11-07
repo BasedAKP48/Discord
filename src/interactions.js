@@ -80,13 +80,12 @@ function createRelay({
       }
 
       const { interaction } = state;
+      const editing = state.component && (update || (first && !hidden));
       await run(state, async () => {
-        if (!first) {
+        if (editing) {
+          await interaction.editOriginalMessage(replacing(content));
+        } else if (!first || state.component) {
           await interaction.createFollowup(hidden ? { ...content, flags: EPHEMERAL } : content);
-        } else if (state.component) {
-          await (hidden && !update
-            ? interaction.createFollowup({ ...content, flags: EPHEMERAL })
-            : interaction.editOriginalMessage(replacing(content)));
         } else if (hidden && !state.ephemeral) {
           await interaction.deleteOriginalMessage();
           await interaction.createFollowup({ ...content, flags: EPHEMERAL });

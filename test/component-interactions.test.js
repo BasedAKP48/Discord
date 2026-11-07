@@ -119,14 +119,54 @@ test('a private reply that says it updates edits the message, instead of followi
   ]);
 });
 
-test('a later private reply is a follow-up even when it says it updates', async () => {
+test('a later reply that says it updates edits the message again, so progress can become the result', async () => {
+  const click = createClick();
+  relay.track(click, { component: true });
+
+  await relay.reply('c1', { content: 'Processing' }, { private: true, update: true });
+  await relay.reply('c1', { embeds: [{ title: 'Done' }] }, { private: true, update: true });
+
+  assert.deepEqual(click.calls, [
+    ['editOriginalMessage', { content: 'Processing', embeds: [], components: [] }],
+    ['editOriginalMessage', { embeds: [{ title: 'Done' }], components: [] }],
+  ]);
+});
+
+test('updates are applied in the order they were sent, even when sent together', async () => {
+  const click = createClick();
+  relay.track(click, { component: true });
+
+  await Promise.all([
+    relay.reply('c1', { content: 'one' }, { private: true, update: true }),
+    relay.reply('c1', { content: 'two' }, { private: true, update: true }),
+    relay.reply('c1', { content: 'three' }, { private: true, update: true }),
+  ]);
+
+  assert.deepEqual(click.calls.map(([name, content]) => `${name}:${content.content}`), [
+    'editOriginalMessage:one',
+    'editOriginalMessage:two',
+    'editOriginalMessage:three',
+  ]);
+});
+
+test('a later private reply that does not say it updates is still a follow-up', async () => {
+  const click = createClick();
+  relay.track(click, { component: true });
+
+  await relay.reply('c1', { content: 'first' }, { private: true, update: true });
+  await relay.reply('c1', { content: 'second' }, { private: true });
+
+  assert.deepEqual(click.calls[1], ['createFollowup', { content: 'second', flags: EPHEMERAL }]);
+});
+
+test('a later public reply that does not say it updates is a follow-up, as before', async () => {
   const click = createClick();
   relay.track(click, { component: true });
 
   await relay.reply('c1', { content: 'first' });
-  await relay.reply('c1', { content: 'second' }, { private: true, update: true });
+  await relay.reply('c1', { content: 'second' });
 
-  assert.deepEqual(click.calls[1], ['createFollowup', { content: 'second', flags: EPHEMERAL }]);
+  assert.deepEqual(click.calls[1], ['createFollowup', { content: 'second' }]);
 });
 
 test('saying it updates changes nothing for a command, only for a click', async () => {
