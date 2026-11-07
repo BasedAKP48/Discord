@@ -3,8 +3,11 @@ const readline = require('readline');
 const { promisify } = require('util');
 const utils = require('@basedakp48/plugin-utils');
 const getInternalCommand = require('./internal');
+const { withComponents } = require('./src/components');
 const {
+  buildComponentMessage,
   buildInteractionMessage,
+  createComponentHandler,
   createInteractionHandler,
   createPageHandler,
   createRelay,
@@ -39,6 +42,15 @@ const reported = new Set();
 const relay = createRelay({ onError });
 const pager = createPager();
 const handlePage = createPageHandler({ pager });
+const handleComponent = createComponentHandler({
+  relay,
+  buildMessage: (interaction, parsed) => buildComponentMessage(interaction, {
+    cid: connector.cid,
+    connectorName: name,
+    botName: `${discord.user.username}#${discord.user.discriminator}`,
+  }, parsed),
+  send: message => connector.messageSystem().sendMessage(message),
+});
 const handleInteraction = createInteractionHandler({
   relay,
   prefix: PREFIX,
@@ -146,6 +158,7 @@ function initializeBot(options) {
   });
 
   discord.on('interactionCreate', interaction => handlePage(interaction)
+    .then(handled => handled || handleComponent(interaction))
     .then(handled => handled || handleInteraction(interaction))
     .catch(onError));
 
@@ -263,7 +276,12 @@ function messageContent(msg) {
         delete content.content;
       }
     }
-    return attachPages(pager, content, msg.data.discord_pages);
+    return withComponents(
+      attachPages(pager, content, msg.data.discord_pages),
+      msg.uid,
+      msg.data.discord_components,
+      onError,
+    );
   }
   return content;
 }

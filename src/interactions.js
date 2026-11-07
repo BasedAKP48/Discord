@@ -1,9 +1,12 @@
+const utils = require('@basedakp48/plugin-utils');
+
 const { commandArgs, commandText } = require('./slash');
 
 const EPHEMERAL = 64;
 const APPLICATION_COMMAND = 2;
 const CHAT_INPUT = 1;
 const NO_RESPONSE = 'That command did not get a response.';
+const NO_BUTTON_RESPONSE = 'That button did not get a response.';
 const MESSAGE_COMPONENT = 3;
 const EXPIRED = 'That list has expired. Run the command again for a fresh one.';
 
@@ -32,16 +35,19 @@ function createRelay({
     const state = pending.get(id);
     if (!state || state.replied) return;
     pending.delete(id);
-    run(state, () => state.interaction.editOriginalMessage({ content: NO_RESPONSE }));
+    run(state, () => (state.component
+      ? state.interaction.createFollowup({ content: NO_BUTTON_RESPONSE, flags: EPHEMERAL })
+      : state.interaction.editOriginalMessage({ content: NO_RESPONSE })));
   }
 
   return {
     has: id => pending.has(id),
 
-    track(interaction, { ephemeral = false } = {}) {
+    track(interaction, { ephemeral = false, component = false } = {}) {
       const state = {
         interaction,
         ephemeral,
+        component,
         replied: false,
         queue: Promise.resolve(),
         timer: undefined,
@@ -65,6 +71,12 @@ function createRelay({
       await run(state, async () => {
         if (!first) {
           await interaction.createFollowup(hidden ? { ...content, flags: EPHEMERAL } : content);
+        } else if (state.component) {
+          await (hidden
+            ? interaction.createFollowup({ ...content, flags: EPHEMERAL })
+            : interaction.editOriginalMessage(content.components === undefined
+              ? { ...content, components: [] }
+              : content));
         } else if (hidden && !state.ephemeral) {
           await interaction.deleteOriginalMessage();
           await interaction.createFollowup({ ...content, flags: EPHEMERAL });
@@ -77,18 +89,14 @@ function createRelay({
   };
 }
 
-function buildInteractionMessage(interaction, text, { cid, connectorName, botName }, parsed) {
+function describeInteraction(interaction, { connectorName, botName }) {
   const author = interaction.member ? interaction.member.user : interaction.user;
   const { channel } = interaction;
   const guild = channel.guild || null;
 
   return {
-    text,
-    cid,
-    uid: author.id,
-    channel: channel.id,
-    type: 'command',
-    timeReceived: Date.now(),
+    author,
+    channel,
     data: {
       channel: `#${(guild && channel.name) || 'DirectMessage'}`,
       source: `${author.username}#${author.discriminator}`,
@@ -102,8 +110,42 @@ function buildInteractionMessage(interaction, text, { cid, connectorName, botNam
       connectorBotName: botName,
       isPM: !interaction.guildID || null,
       interactionId: interaction.id,
-      command: parsed.command,
-      args: parsed.args,
+    },
+  };
+}
+
+function buildInteractionMessage(interaction, text, { cid, connectorName, botName }, parsed) {
+  const { author, channel, data } = describeInteraction(interaction, { connectorName, botName });
+
+  return {
+    text,
+    cid,
+    uid: author.id,
+    channel: channel.id,
+    type: 'command',
+    timeReceived: Date.now(),
+    data: { ...data, command: parsed.command, args: parsed.args },
+  };
+}
+
+function buildComponentMessage(interaction, { cid, connectorName, botName }, parsed) {
+  const { author, channel, data } = describeInteraction(interaction, { connectorName, botName });
+  const { message } = interaction;
+  const started = message && message.interaction;
+
+  return {
+    text: parsed.id,
+    cid,
+    uid: author.id,
+    channel: channel.id,
+    type: 'component',
+    timeReceived: Date.now(),
+    data: {
+      ...data,
+      pluginCid: parsed.cid,
+      componentId: parsed.id,
+      messageId: message ? message.id : null,
+      invokerId: started && started.user ? started.user.id : null,
     },
   };
 }
@@ -145,6 +187,19 @@ function createInteractionHandler({
   };
 }
 
+function createComponentHandler({ relay, send, buildMessage }) {
+  return async function handleComponent(interaction) {
+    if (interaction.type !== MESSAGE_COMPONENT || !interaction.data) return false;
+    const parsed = utils.parseComponentCustomId(interaction.data.custom_id);
+    if (!parsed) return false;
+
+    await interaction.deferUpdate();
+    relay.track(interaction, { component: true });
+    await send(buildMessage(interaction, parsed));
+    return true;
+  };
+}
+
 function createPageHandler({ pager }) {
   return async function handlePage(interaction) {
     if (interaction.type !== MESSAGE_COMPONENT || !interaction.data) return false;
@@ -165,8 +220,11 @@ function createPageHandler({ pager }) {
 module.exports = {
   EPHEMERAL,
   EXPIRED,
+  NO_BUTTON_RESPONSE,
   NO_RESPONSE,
+  buildComponentMessage,
   buildInteractionMessage,
+  createComponentHandler,
   createInteractionHandler,
   createPageHandler,
   createRelay,
