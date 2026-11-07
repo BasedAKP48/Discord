@@ -258,17 +258,17 @@ test('a command that is gone or offline is answered privately and never sent', a
   assert.equal(relay.has('i3') || relay.has('i4'), false);
 });
 
-test('anything that is not a chat input command is ignored', async () => {
+test('anything that is not a command or a menu command is ignored', async () => {
   const { handle, sent } = createHandler();
   const component = createInteraction('i5', { type: 3 });
-  const userMenu = createInteraction('i6', { data: { type: 2, name: 'balance' } });
+  const unknown = createInteraction('i6', { data: { type: 9, name: 'balance' } });
   const noData = createInteraction('i7', { data: undefined });
 
   await handle(component);
-  await handle(userMenu);
+  await handle(unknown);
   await handle(noData);
 
-  assert.equal(component.calls.length + userMenu.calls.length + noData.calls.length, 0);
+  assert.equal(component.calls.length + unknown.calls.length + noData.calls.length, 0);
   assert.equal(sent.length, 0);
 });
 

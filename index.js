@@ -323,7 +323,11 @@ async function syncCommands() {
 
   if (!slashEnabled || !discord || !discord.application) return;
 
-  const plan = planSync(found.commands, { commandGuild, guildsOf: utils.commandGuilds });
+  const plan = planSync(found.commands, {
+    commandGuild,
+    guildsOf: utils.commandGuilds,
+    onProblem: reportOnce,
+  });
   const { updates, clears } = reconcile(plan, synced);
 
   const attempt = (target, task) => task().catch((error) => {

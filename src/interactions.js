@@ -1,10 +1,16 @@
 const utils = require('@basedakp48/plugin-utils');
 
-const { commandArgs, commandText } = require('./slash');
+const {
+  commandArgs, commandText, findChatCommand, findMenuCommand, suggestions,
+} = require('./slash');
 
 const EPHEMERAL = 64;
 const APPLICATION_COMMAND = 2;
+const AUTOCOMPLETE = 4;
 const CHAT_INPUT = 1;
+const USER_MENU = 2;
+const MESSAGE_MENU = 3;
+const NO_TEXT = 'That message has no text to use.';
 const NO_RESPONSE = 'That command did not get a response.';
 const NO_BUTTON_RESPONSE = 'That button did not get a response.';
 const MESSAGE_COMPONENT = 3;
@@ -124,7 +130,12 @@ function buildInteractionMessage(interaction, text, { cid, connectorName, botNam
     channel: channel.id,
     type: 'command',
     timeReceived: Date.now(),
-    data: { ...data, command: parsed.command, args: parsed.args },
+    data: {
+      ...data,
+      command: parsed.command,
+      args: parsed.args,
+      ...(parsed.target ? { target: parsed.target } : {}),
+    },
   };
 }
 
@@ -158,23 +169,69 @@ function createInteractionHandler({
   isAllowed = () => true,
   prefix = '.',
 }) {
-  return async function handle(interaction) {
-    if (interaction.type !== APPLICATION_COMMAND) return;
-    if (!interaction.data || interaction.data.type !== CHAT_INPUT) return;
+  const commandList = () => Array.from(getCommands().values());
 
-    const command = getCommands().get(interaction.data.name);
-    if (!command) {
+  const readTarget = (interaction) => {
+    const { data } = interaction;
+    if (data.type === CHAT_INPUT) {
+      const found = findChatCommand(commandList(), data);
+      return found ? { ...found, resolved: data.resolved } : null;
+    }
+
+    const menu = findMenuCommand(commandList(), data);
+    if (!menu) return null;
+    if (data.type === USER_MENU) {
+      return {
+        command: menu.command,
+        options: [{ name: menu.arg, value: data.target_id }],
+        target: { type: 'user', id: data.target_id },
+      };
+    }
+
+    const messages = data.resolved && data.resolved.messages;
+    const found = messages && messages.get(data.target_id);
+    return {
+      command: menu.command,
+      options: [{ name: menu.arg, value: found ? found.content : '' }],
+      target: {
+        type: 'message',
+        id: data.target_id,
+        authorId: found && found.author ? found.author.id : null,
+      },
+      empty: !found || !found.content,
+    };
+  };
+
+  return async function handle(interaction) {
+    if (interaction.type === AUTOCOMPLETE) {
+      if (interaction.data) await interaction.result(suggestions(commandList(), interaction.data));
+      return;
+    }
+    if (interaction.type !== APPLICATION_COMMAND || !interaction.data) return;
+    if (![CHAT_INPUT, USER_MENU, MESSAGE_MENU].includes(interaction.data.type)) return;
+
+    const read = readTarget(interaction);
+    if (!read) {
       await interaction.createMessage({ content: 'That command does not exist any more.', flags: EPHEMERAL });
       return;
     }
+    const { command } = read;
     if (!command.online) {
       await interaction.createMessage({ content: 'That command is not available right now.', flags: EPHEMERAL });
       return;
     }
+    if (read.empty) {
+      await interaction.createMessage({ content: NO_TEXT, flags: EPHEMERAL });
+      return;
+    }
 
-    const text = commandText(prefix, command, interaction.data.options);
-    const args = commandArgs(command, interaction.data.options);
-    const message = buildMessage(interaction, text, { command: command.name, args });
+    const text = commandText(prefix, command, read.options, read.resolved);
+    const args = commandArgs(command, read.options, read.resolved);
+    const message = buildMessage(interaction, text, {
+      command: command.name,
+      args,
+      ...(read.target ? { target: read.target } : {}),
+    });
     if (!isAllowed(command, message)) {
       await interaction.createMessage({ content: 'That command is not available here.', flags: EPHEMERAL });
       return;
@@ -222,6 +279,7 @@ module.exports = {
   EXPIRED,
   NO_BUTTON_RESPONSE,
   NO_RESPONSE,
+  NO_TEXT,
   buildComponentMessage,
   buildInteractionMessage,
   createComponentHandler,
