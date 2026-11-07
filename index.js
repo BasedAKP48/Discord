@@ -132,7 +132,7 @@ connector.messageSystem().on('message/internal', (msg, ref) => {
 }).on('message/private', (msg, ref) => {
   ref.remove();
   if (!discord) return;
-  answerInteraction(msg, { private: true })
+  answerInteraction(msg, { private: true, update: Boolean(msg.data && msg.data.discord_update) })
     .then(answered => answered || discord.getDMChannel(msg.channel).then((channel) => {
       msg.channel = channel.id;
       return sendMessage(msg);

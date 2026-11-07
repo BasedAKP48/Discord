@@ -75,23 +75,70 @@ beforeEach(() => {
   });
 });
 
-test('the first reply to a click edits the message the button is on, and takes its buttons off', async () => {
+test('the first reply to a click edits the message the button is on, and takes its buttons and embed off', async () => {
   const click = createClick();
   relay.track(click, { component: true });
 
   await relay.reply('c1', { content: 'Bought' });
 
-  assert.deepEqual(click.calls, [['editOriginalMessage', { content: 'Bought', components: [] }]]);
+  assert.deepEqual(click.calls, [
+    ['editOriginalMessage', { content: 'Bought', embeds: [], components: [] }],
+  ]);
 });
 
-test('a reply that brings buttons of its own keeps them', async () => {
+test('a reply that brings buttons of its own keeps them, and still replaces the embed', async () => {
   const click = createClick();
   relay.track(click, { component: true });
   const components = [{ type: 1, components: [] }];
 
   await relay.reply('c1', { content: 'Sure?', components });
 
-  assert.deepEqual(click.calls, [['editOriginalMessage', { content: 'Sure?', components }]]);
+  assert.deepEqual(click.calls, [
+    ['editOriginalMessage', { content: 'Sure?', components, embeds: [] }],
+  ]);
+});
+
+test('a reply that brings an embed of its own keeps it, and still takes the buttons off', async () => {
+  const click = createClick();
+  relay.track(click, { component: true });
+  const embeds = [{ title: 'Done' }];
+
+  await relay.reply('c1', { embeds });
+
+  assert.deepEqual(click.calls, [['editOriginalMessage', { embeds, components: [] }]]);
+});
+
+test('a private reply that says it updates edits the message, instead of following up', async () => {
+  const click = createClick();
+  relay.track(click, { component: true });
+
+  await relay.reply('c1', { content: 'secret' }, { private: true, update: true });
+
+  assert.deepEqual(click.calls, [
+    ['editOriginalMessage', { content: 'secret', embeds: [], components: [] }],
+  ]);
+});
+
+test('a later private reply is a follow-up even when it says it updates', async () => {
+  const click = createClick();
+  relay.track(click, { component: true });
+
+  await relay.reply('c1', { content: 'first' });
+  await relay.reply('c1', { content: 'second' }, { private: true, update: true });
+
+  assert.deepEqual(click.calls[1], ['createFollowup', { content: 'second', flags: EPHEMERAL }]);
+});
+
+test('saying it updates changes nothing for a command, only for a click', async () => {
+  const command = createClick('k1');
+  relay.track(command, { ephemeral: false });
+
+  await relay.reply('k1', { content: 'secret' }, { private: true, update: true });
+
+  assert.deepEqual(command.calls, [
+    ['deleteOriginalMessage'],
+    ['createFollowup', { content: 'secret', flags: EPHEMERAL }],
+  ]);
 });
 
 test('a private reply to a click is a follow-up, and the message with the buttons stays', async () => {
@@ -206,7 +253,10 @@ test('a click is tracked as a click, so the reply edits the message and does not
 
   await relay.reply('c1', { content: 'done' }, { private: false });
 
-  assert.deepEqual(click.calls[1], ['editOriginalMessage', { content: 'done', components: [] }]);
+  assert.deepEqual(click.calls[1], [
+    'editOriginalMessage',
+    { content: 'done', embeds: [], components: [] },
+  ]);
 });
 
 test('anything that is not a click on a plugin\'s button is left for the others', async () => {

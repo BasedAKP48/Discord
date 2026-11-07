@@ -16,6 +16,12 @@ const NO_BUTTON_RESPONSE = 'That button did not get a response.';
 const MESSAGE_COMPONENT = 3;
 const EXPIRED = 'That list has expired. Run the command again for a fresh one.';
 
+const replacing = content => ({
+  ...content,
+  embeds: content.embeds === undefined ? [] : content.embeds,
+  components: content.components === undefined ? [] : content.components,
+});
+
 function createRelay({
   timeout = 30000,
   keep = 300000,
@@ -62,7 +68,7 @@ function createRelay({
       pending.set(interaction.id, state);
     },
 
-    async reply(id, content, { private: hidden = false } = {}) {
+    async reply(id, content, { private: hidden = false, update = false } = {}) {
       const state = pending.get(id);
       if (!state) return false;
 
@@ -78,11 +84,9 @@ function createRelay({
         if (!first) {
           await interaction.createFollowup(hidden ? { ...content, flags: EPHEMERAL } : content);
         } else if (state.component) {
-          await (hidden
+          await (hidden && !update
             ? interaction.createFollowup({ ...content, flags: EPHEMERAL })
-            : interaction.editOriginalMessage(content.components === undefined
-              ? { ...content, components: [] }
-              : content));
+            : interaction.editOriginalMessage(replacing(content)));
         } else if (hidden && !state.ephemeral) {
           await interaction.deleteOriginalMessage();
           await interaction.createFollowup({ ...content, flags: EPHEMERAL });
