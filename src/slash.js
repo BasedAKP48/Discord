@@ -11,18 +11,26 @@ const OPTION_TYPES = {
 };
 const EXTRAS = ['dmPermission', 'defaultMemberPermissions', 'nsfw'];
 
+function toDiscordOption(arg) {
+  const option = {
+    name: arg.name,
+    description: arg.description,
+    type: OPTION_TYPES[arg.type],
+    required: arg.required === true,
+  };
+  if (Array.isArray(arg.choices) && arg.choices.length) {
+    option.choices = arg.choices.map(({ name, value }) => ({ name, value }));
+  }
+  return option;
+}
+
 function toDiscordCommand(command) {
   const extras = command.discord || {};
   const payload = {
     name: command.name,
     description: command.description,
     type: ApplicationCommandTypes.CHAT_INPUT,
-    options: (command.args || []).map(arg => ({
-      name: arg.name,
-      description: arg.description,
-      type: OPTION_TYPES[arg.type],
-      required: arg.required === true,
-    })),
+    options: (command.args || []).map(toDiscordOption),
   };
   EXTRAS.forEach((key) => {
     if (extras[key] !== undefined) payload[key] = extras[key];

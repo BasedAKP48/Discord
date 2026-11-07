@@ -52,6 +52,56 @@ test('a definition becomes a chat input command with typed options', () => {
   });
 });
 
+test('an option with choices offers exactly those to pick from', () => {
+  const [command] = toDiscordCommands([{
+    name: 'voucher-buy',
+    description: 'Buy a voucher',
+    args: [
+      {
+        name: 'plan',
+        description: 'Which plan',
+        type: 'string',
+        required: true,
+        choices: [{ name: 'Monthly', value: 'monthly', extra: 'dropped' }, { name: 'Yearly', value: 'yearly' }],
+      },
+      {
+        name: 'count', description: 'How many', type: 'integer', choices: [{ name: 'One', value: 1 }],
+      },
+    ],
+  }]);
+
+  assert.deepEqual(command.options[0].choices, [
+    { name: 'Monthly', value: 'monthly' },
+    { name: 'Yearly', value: 'yearly' },
+  ]);
+  assert.deepEqual(command.options[1].choices, [{ name: 'One', value: 1 }]);
+});
+
+test('an option with an empty list of choices has no choices, so any text is accepted', () => {
+  const [command] = toDiscordCommands([{
+    name: 'voucher-buy',
+    description: 'Buy a voucher',
+    args: [{
+      name: 'plan', description: 'Which plan', type: 'string', choices: [],
+    }],
+  }]);
+
+  assert.equal('choices' in command.options[0], false);
+});
+
+test('changing the choices changes the hash, so the commands are registered again', () => {
+  const withChoices = choices => hashCommands(toDiscordCommands([{
+    name: 'voucher-buy',
+    description: 'Buy a voucher',
+    args: [{
+      name: 'plan', description: 'Which plan', type: 'string', choices,
+    }],
+  }]));
+
+  assert.notEqual(withChoices([{ name: 'A', value: 'a' }]), withChoices([{ name: 'B', value: 'b' }]));
+  assert.equal(withChoices([{ name: 'A', value: 'a' }]), withChoices([{ name: 'A', value: 'a' }]));
+});
+
 test('only the known discord settings are passed on', () => {
   const [command] = toDiscordCommands([balance]);
 
